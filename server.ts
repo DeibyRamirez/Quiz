@@ -22,8 +22,9 @@ import { setSocketIO } from "./src/lib/server/socket/io";
 import { configurarSocketIO } from "./src/lib/server/socket/setup";
 
 const dev = process.env.NODE_ENV !== "production";
-// En Docker/producción usar HOSTNAME=0.0.0.0; en dev local basta "localhost"
-const hostname = process.env.HOSTNAME || "localhost";
+// Render/Docker: escuchar en 0.0.0.0 (si es localhost, el proxy devuelve 502)
+const hostname =
+  process.env.HOSTNAME || (dev ? "localhost" : "0.0.0.0");
 const port = parseInt(process.env.PORT || "3000", 10);
 
 const app = next({ dev, hostname, port });
@@ -51,7 +52,10 @@ app.prepare().then(() => {
   // Escuchar en 0.0.0.0 dentro del contenedor permite tráfico desde el puerto publicado
   const listenHost = hostname === "0.0.0.0" ? "0.0.0.0" : hostname;
   httpServer.listen(port, listenHost, () => {
-    console.log(`> Electro Quiz listo en http://${hostname}:${port}`);
+    console.log(`> Electro Quiz listo en http://${listenHost}:${port}`);
     console.log(`> WebSocket Socket.io en path /api/socket`);
   });
+}).catch((err) => {
+  console.error("Error al iniciar el servidor:", err);
+  process.exit(1);
 });
