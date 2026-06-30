@@ -8,7 +8,8 @@
  *
  * Despliegue (Docker / Render / Fly):
  * - Un solo contenedor/proceso ejecuta ESTE archivo (`npm run start`).
- * - HOSTNAME=0.0.0.0 para escuchar fuera del contenedor.
+ * - HOST o BIND_HOST=0.0.0.0 para escuchar fuera del contenedor (Render/Fly/Docker).
+ * - No uses process.env.HOSTNAME: en Render/Linux es el nombre del contenedor, no 0.0.0.0.
  * - NEXT_PUBLIC_APP_URL debe coincidir con el dominio del navegador (CORS socket).
  * - No usar `next start`: el WebSocket no se montaría.
  *
@@ -22,12 +23,24 @@ import { setSocketIO } from "./src/lib/server/socket/io";
 import { configurarSocketIO } from "./src/lib/server/socket/setup";
 
 const dev = process.env.NODE_ENV !== "production";
-// Render/Docker: escuchar en 0.0.0.0 (si es localhost, el proxy devuelve 502)
-const hostname =
-  process.env.HOSTNAME || (dev ? "localhost" : "0.0.0.0");
 const port = parseInt(process.env.PORT || "3000", 10);
 
-const app = next({ dev, hostname, port });
+/** Dirección de escucha HTTP. Render inyecta HOSTNAME con el id del contenedor → 502 si se usa para bind. */
+function resolveListenHost(): string {
+  const explicit =
+    process.env.HOST?.trim() || process.env.BIND_HOST?.trim();
+  if (explicit) return explicit;
+  // Compat Docker compose legacy (HOSTNAME=0.0.0.0)
+  if (process.env.HOSTNAME?.trim() === "0.0.0.0") return "0.0.0.0";
+  return dev ? "localhost" : "0.0.0.0";
+}
+
+const listenHost = resolveListenHost();
+
+const app = next({
+  dev,
+  ...(dev ? { hostname: listenHost, port } : { port }),
+});
 const handle = app.getRequestHandler();
 
 app.prepare().then(() => {
@@ -49,8 +62,6 @@ app.prepare().then(() => {
   configurarSocketIO(io);
   setSocketIO(io);
 
-  // Escuchar en 0.0.0.0 dentro del contenedor permite tráfico desde el puerto publicado
-  const listenHost = hostname === "0.0.0.0" ? "0.0.0.0" : hostname;
   httpServer.listen(port, listenHost, () => {
     console.log(`> Electro Quiz listo en http://${listenHost}:${port}`);
     console.log(`> WebSocket Socket.io en path /api/socket`);
