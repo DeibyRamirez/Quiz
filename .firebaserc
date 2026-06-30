@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "Electro_Quiz": "calculo-de-fuerzas-electricas",
+    "default": "calculo-de-fuerzas-electricas"
+  },
+  "targets": {},
+  "etags": {}
+}

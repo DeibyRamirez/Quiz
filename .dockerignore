@@ -1,0 +1,32 @@
+# Dependencias y artefactos de build (se regeneran dentro de la imagen)
+node_modules
+.next
+out
+build
+
+# Entorno local — nunca empaquetar secretos en la imagen
+.env
+.env.*
+!.env.docker.example
+
+# Control de versiones e IDE
+.git
+.gitignore
+.cursor
+.vscode
+
+# Documentación y funciones legacy (no necesarias en runtime)
+docs
+functions
+
+# Logs y cachés de desarrollo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.tsbuildinfo
+
+# Docker (evita invalidar caché al editar solo compose/Dockerfile)
+Dockerfile*
+docker-compose*.yml
+.dockerignore

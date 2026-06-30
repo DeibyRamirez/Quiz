@@ -1,0 +1,73 @@
+# =============================================================================
+# Electro Quiz — stack local completo (app + MongoDB)
+# =============================================================================
+#
+# Uso:
+#   cp .env.docker.example .env.docker
+#   docker compose up --build
+#
+# Producción / Render / Fly:
+#   Despliega SOLO la imagen de la app (Dockerfile) y apunta MONGODB_URI a Atlas.
+#   No levantes el servicio `mongo` en la nube.
+#
+# Escalabilidad futura:
+#   - Réplicas del servicio `app` detrás de un balanceador con sticky sessions
+#   - Redis como adapter de Socket.io (ver docs/guias/docker.md)
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Base de datos — solo desarrollo / pruebas locales
+  # En producción usar MongoDB Atlas (M0 gratis) u otro cluster gestionado
+  # ---------------------------------------------------------------------------
+  mongo:
+    image: mongo:7
+    container_name: electro-quiz-mongo
+    restart: unless-stopped
+    ports:
+      # Expuesto al host para Compass / mongosh durante desarrollo
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: Electroquiz
+    volumes:
+      # Persistencia entre reinicios del contenedor
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ---------------------------------------------------------------------------
+  # Aplicación — Next.js + API REST + Socket.io (un solo proceso Node)
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # URL pública desde el navegador (localhost al probar en tu máquina)
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000/api}
+    container_name: electro-quiz-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    env_file:
+      - path: .env.docker
+        required: false
+    environment:
+      # Sobrescribe / complementa .env.docker
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017/Electroquiz}
+      JWT_SECRET: ${JWT_SECRET:-cambiar-en-produccion-secreto-largo}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+volumes:
+  mongo_data:
+    name: electro-quiz-mongo-data
