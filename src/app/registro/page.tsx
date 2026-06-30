@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -86,9 +87,8 @@ export default function RegistroPage() {
 
           <div className="space-y-2">
             <Label htmlFor="contraseña">Contraseña</Label>
-            <Input
+            <PasswordInput
               id="contraseña"
-              type="password"
               value={contraseña}
               onChange={(e) => setContraseña(e.target.value)}
               required
