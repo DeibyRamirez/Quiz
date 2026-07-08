@@ -25,9 +25,9 @@ FROM base AS deps
 # Copiamos manifiestos primero para aprovechar la caché de capas de Docker
 COPY package.json package-lock.json ./
 
-# Instalación reproducible; incluye devDependencies porque `npm run start`
-# usa `tsx` para ejecutar server.ts en producción
-RUN npm ci
+# Instalación en imagen limpia. `npm ci` falla con npm 10 del contenedor cuando el
+# lockfile fue generado con npm 11 y faltan peers opcionales de mongodb/firebase.
+RUN npm install --no-audit --no-fund
 
 # --- Etapa 3: build de Next.js -----------------------------------------------
 FROM base AS builder

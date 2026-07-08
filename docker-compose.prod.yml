@@ -6,8 +6,10 @@
 #
 # Uso:
 #   cp .env.docker.example .env.docker
-#   # Editar MONGODB_URI con tu cluster Atlas
-#   docker compose -f docker-compose.prod.yml up --build -d
+#   # Editar MONGODB_URI, JWT_SECRET y URLs
+#   docker compose --env-file .env.docker -f docker-compose.prod.yml up --build -d
+#
+# Nota: Compose solo lee .env.docker para build args si pasas --env-file .env.docker
 #
 # =============================================================================
 
@@ -27,6 +29,6 @@ services:
       - path: .env.docker
         required: true
     environment:
-      HOSTNAME: 0.0.0.0
+      HOST: 0.0.0.0
       PORT: 3000
       # MONGODB_URI y JWT_SECRET deben venir de .env.docker o del orchestrator

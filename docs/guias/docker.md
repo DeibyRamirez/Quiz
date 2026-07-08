@@ -148,8 +148,10 @@ En Atlas → **Network Access** → permite la IP del servidor o `0.0.0.0/0` par
 ### 2. Build y arranque
 
 ```bash
-docker compose -f docker-compose.prod.yml up --build -d
+docker compose --env-file .env.docker -f docker-compose.prod.yml up --build -d
 ```
+
+> **Importante:** sin `--env-file .env.docker`, Compose no encuentra `NEXT_PUBLIC_APP_URL` para el build.
 
 ### 3. Build manual (sin Compose)
 

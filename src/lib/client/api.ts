@@ -9,10 +9,25 @@ export class ApiError extends Error {
   }
 }
 
-const DEFAULT_API_URL = `http://localhost:${process.env.PORT ?? "3000"}/api`;
-
 function obtenerBaseUrlApi() {
-  return (process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API_URL).replace(/\/+$/, "");
+  const configured = process.env.NEXT_PUBLIC_API_URL?.trim()?.replace(/\/+$/, "");
+
+  if (typeof window !== "undefined") {
+    // Monolito: si la API configurada no coincide con el host actual, usar mismo origen
+    if (configured) {
+      try {
+        if (new URL(configured).origin === window.location.origin) {
+          return configured;
+        }
+      } catch {
+        /* URL inválida; caer a /api relativo */
+      }
+    }
+    return "/api";
+  }
+
+  if (configured) return configured;
+  return `http://127.0.0.1:${process.env.PORT ?? "3000"}/api`;
 }
 
 export function contruirUrlApi(path: string) {
