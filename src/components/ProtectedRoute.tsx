@@ -16,24 +16,43 @@ export default function ProtectedRoute({
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
+    let active = true;
+
     const checkAccess = async () => {
-      const usuario = await obtenerUsuarioActual();
+      try {
+        const usuario = await obtenerUsuarioActual();
 
-      if (!usuario) {
-        router.push("/login");
-        return;
+        if (!active) return;
+
+        if (!usuario) {
+          setAuthorized(false);
+          setLoading(false);
+          router.replace("/login");
+          return;
+        }
+
+        if (allowedRoles.includes(usuario.rol)) {
+          setAuthorized(true);
+          setLoading(false);
+          return;
+        }
+
+        setAuthorized(false);
+        setLoading(false);
+        router.replace("/acceso-denegado");
+      } catch {
+        if (!active) return;
+        setAuthorized(false);
+        setLoading(false);
+        router.replace("/login");
       }
-
-      if (allowedRoles.includes(usuario.rol)) {
-        setAuthorized(true);
-      } else {
-        router.push("/acceso-denegado");
-      }
-
-      setLoading(false);
     };
 
     checkAccess();
+
+    return () => {
+      active = false;
+    };
   }, [router, allowedRoles]);
 
   if (loading) return <p className="text-center py-8">Verificando acceso...</p>;

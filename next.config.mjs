@@ -1,4 +1,10 @@
 /** @type {import('next').NextConfig} */
+const configuredBasePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").trim()
+const normalizedBasePath =
+  configuredBasePath && configuredBasePath !== "/"
+    ? `/${configuredBasePath.replace(/^\/+|\/+$/g, "")}`
+    : ""
+
 const nextConfig = {
   // La diferencia entre export y standalone es que export genera archivos estaticos
   // mientras que standalone genera una version optimizada para produccion.
@@ -22,7 +28,7 @@ const nextConfig = {
     // ],
   },
   assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
-  basePath: '',
+  basePath: normalizedBasePath,
   distDir: '.next'
 }
 
