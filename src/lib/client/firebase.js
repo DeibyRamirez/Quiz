@@ -24,6 +24,9 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 export const rtdb = getDatabase(app)
 const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ hd: "uniautonoma.edu.co" });
+provider.addScope("email");
+provider.addScope("profile");
 
 export { app, db, auth, provider, signInWithPopup, signOut, doc, getDoc, setDoc, };
 

@@ -16,3 +16,7 @@ export const registroSchema = z.object({
     .enum([RolUsuario.ESTUDIANTE, RolUsuario.DOCENTE])
     .default(RolUsuario.ESTUDIANTE),
 });
+
+export const googleAuthSchema = z.object({
+  idToken: z.string().trim().min(1, "Token de Google inválido"),
+});
