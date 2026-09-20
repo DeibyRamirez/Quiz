@@ -15,6 +15,8 @@ interface PreguntaBase extends EntidadBase, Timestamps {
   tiempoLimite: number;
   activa: boolean;
   explicacion?: string;
+  criteriosEvaluacion?: string;
+  requiereCorreccionManual?: boolean;
   tema?: string;
 }
 
@@ -33,7 +35,7 @@ export interface PreguntaVerdaderoFalso extends PreguntaBase {
 
 export interface PreguntaRespuestaCorta extends PreguntaBase {
   tipo: TipoPregunta.RESPUESTA_CORTA;
-  respuestaCorrecta: string;
+  respuestaCorrecta: string | string[];
   caseSensitive?: boolean;
   maxLength?: number;
 }
@@ -87,10 +89,13 @@ export function validarPregunta(pregunta: CrearPregunta | Pregunta): boolean {
       return typeof pregunta.respuestaCorrecta === "boolean";
 
     case TipoPregunta.RESPUESTA_CORTA:
+      if (pregunta.requiereCorreccionManual && pregunta.criteriosEvaluacion?.trim()) {
+        return true;
+      }
       const respuestasValidas = Array.isArray(pregunta.respuestaCorrecta)
         ? pregunta.respuestaCorrecta
         : [pregunta.respuestaCorrecta];
-      return respuestasValidas.length > 0 && respuestasValidas.every((r) => r.trim());
+      return respuestasValidas.length > 0 && respuestasValidas.every((r) => String(r).trim());
 
     default:
       return false;

@@ -20,6 +20,20 @@ Legacy: documentos antiguos pueden tener `tipo: "numerical"` — tratado como `r
 | `true-false` | Verdadero / Falso |
 | `numerical` | Número con unidad física (`unit` en `tema`) |
 | `exact-text` | Palabra/número exacto sin unidad |
+| `open-text` | Desarrollo; corrección manual docente |
+
+## Tipos IA (motor de generación)
+
+Usados internamente por el módulo IA (`src/app/types/quiz-ia.ts`):
+
+| Tipo IA | Mongo resultante |
+|---------|------------------|
+| `true_false` | `verdadero_falso` |
+| `single_choice` | `multiple_opcion` (una correcta) |
+| `multi_choice` | `multiple_opcion` (`permiteMultiples: true`) |
+| `open_text` | `respuesta_corta` + `criteriosEvaluacion` |
+
+Ver [modulo-quiz-ia.md](./modulo-quiz-ia.md).
 
 ## Mapeo UI → Mongo
 
@@ -29,6 +43,7 @@ Legacy: documentos antiguos pueden tener `tipo: "numerical"` — tratado como `r
 | true-false | `verdadero_falso` | boolean | opcional |
 | numerical | `respuesta_corta` | string del número | `unit:metros` etc. |
 | exact-text | `respuesta_corta` | string exacto | opcional |
+| open-text | `respuesta_corta` | vacío | `criteriosEvaluacion`; `requiereCorreccionManual: true` |
 
 Funciones en `lib/client/mappers/pregunta-ui.ts`:
 

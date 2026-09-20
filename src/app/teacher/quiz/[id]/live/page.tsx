@@ -37,6 +37,7 @@ export default function LiveQuizPage() {
   const [sessionName, setSessionName] = useState("");
   const [isSessionNameTouched, setIsSessionNameTouched] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
 
   const isTransitioningRef = useRef(false);
   const hasInitializedSession = useRef(false);
@@ -52,6 +53,10 @@ export default function LiveQuizPage() {
 
   const isSessionNameValid = sessionName.trim().length > 0;
   const canStartQuiz = players.length > 0 && isSessionNameValid;
+  const urlUnion =
+    typeof window !== "undefined" && pin
+      ? `${window.location.origin}/student/quiz/${pin}/`
+      : "";
 
   useEffect(() => {
     if (!quizId) return;
@@ -119,9 +124,22 @@ export default function LiveQuizPage() {
     try {
       await navigator.clipboard.writeText(pin);
       setCopied(true);
+      setCopiedUrl(false);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       alert("No se pudo copiar");
+    }
+  };
+
+  const copyUrlUnion = async () => {
+    if (!urlUnion) return;
+    try {
+      await navigator.clipboard.writeText(urlUnion);
+      setCopiedUrl(true);
+      setCopied(false);
+      setTimeout(() => setCopiedUrl(false), 2000);
+    } catch {
+      alert("No se pudo copiar la URL");
     }
   };
 
@@ -268,17 +286,42 @@ export default function LiveQuizPage() {
                 <p className="text-xs text-muted-foreground">Aparecerá en los resultados</p>
               </div>
 
-              <div className="flex items-center gap-3">
-                <span className="text-lg">PIN:</span>
-                <span className="font-bold text-3xl text-primary">{pin}</span>
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-lg">PIN:</span>
+                  <span className="font-bold text-3xl text-primary">{pin}</span>
+                  <Button size="sm" variant="outline" onClick={copyPin}>
+                    {copied ? <Check className="h-4 w-4 text-green-600 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
+                    {copied ? "PIN copiado" : "Copiar PIN"}
+                  </Button>
+                </div>
 
+                {urlUnion ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="url-union">URL para unirse (este mismo servidor)</Label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Input
+                        id="url-union"
+                        readOnly
+                        value={urlUnion}
+                        className="input-institutional font-mono text-sm"
+                      />
+                      <Button size="sm" variant="outline" onClick={copyUrlUnion} className="shrink-0">
+                        {copiedUrl ? (
+                          <Check className="h-4 w-4 text-green-600 mr-1" />
+                        ) : (
+                          <Copy className="h-4 w-4 mr-1" />
+                        )}
+                        {copiedUrl ? "URL copiada" : "Copiar URL"}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Los estudiantes deben entrar por esta URL o por el PIN en esta misma web.
+                      Unirse desde otro dominio (por ejemplo producción si tú estás en local) no encuentra esta sesión.
+                    </p>
+                  </div>
+                ) : null}
               </div>
-
-                <div></div>
-              <Button size="sm" variant="outline" onClick={copyPin}>
-                {copied ? <Check className="h-4 w-4 text-green-600 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
-                {copied ? "Copiado" : "Copiar"}
-              </Button>
 
               <div>
                 <h3 className="font-semibold mb-2">Jugadores conectados ({players.length}):</h3>

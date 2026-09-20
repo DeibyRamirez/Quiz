@@ -9,6 +9,7 @@ Qué hace el producto, reglas de negocio y recorridos por rol (docente, estudian
 | [business-logic.md](./business-logic.md) | Reglas por módulo: quizzes, sesiones, calificación, roles |
 | [user-flows.md](./user-flows.md) | Flujos end-to-end desde la perspectiva del usuario |
 | [question-types.md](./question-types.md) | Tipos de pregunta, mapeo UI ↔ Mongo, puntaje |
+| [modulo-quiz-ia.md](./modulo-quiz-ia.md) | Generación y refinamiento de quizzes con IA |
 
 ## Relación con otras secciones
 

@@ -1,5 +1,6 @@
 import type { EntidadBase, OmitEntidadPersistida, Timestamps } from "./base";
 import type { Pregunta } from "./pregunta";
+import type { ConfigGeneracion, OrigenGeneracion } from "./quiz-ia";
 
 export enum EstadoQuiz {
   BORRADOR = "borrador",
@@ -14,6 +15,10 @@ export interface QuizBase extends EntidadBase, Timestamps {
   titulo: string;
   descripcion: string;
   estado: EstadoQuiz;
+  guiaId?: string;
+  version?: number;
+  configGeneracion?: ConfigGeneracion;
+  origenGeneracion?: OrigenGeneracion;
 }
 
 /** Respuesta de `GET /api/quizzes/[id]` */

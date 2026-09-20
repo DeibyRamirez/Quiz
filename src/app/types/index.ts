@@ -31,6 +31,26 @@ export type {
   ActualizarQuiz,
 } from "./quiz";
 
+export type {
+  Guia,
+  GuiaBase,
+  CrearGuia,
+  ResultadoSubidaGuia,
+} from "./guia";
+
+export {
+  OrigenGeneracion,
+  TIPOS_PREGUNTA_IA,
+} from "./quiz-ia";
+export type {
+  TipoPreguntaIa,
+  PreguntaIa,
+  ConfigGeneracion,
+  QuizGeneradoIa,
+  ResultadoGeneracionQuiz,
+  ResultadoRefinamientoQuiz,
+} from "./quiz-ia";
+
 export {
   TipoPregunta,
   TIPOS_PREGUNTA,

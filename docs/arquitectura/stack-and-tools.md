@@ -53,6 +53,7 @@ npm run build        # Build producción
 npm run start        # Next + Socket.io en producción
 npm run lint         # ESLint
 npm run test:mongo   # Prueba conexión Mongo
+npm run seed:docente # Crea o restablece el docente semilla
 ```
 
 **No uses** `next dev` / `next start` aislados: WebSocket no arranca sin `server.ts`.

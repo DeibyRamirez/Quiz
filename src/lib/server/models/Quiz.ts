@@ -1,5 +1,6 @@
 import { Schema, model, models } from "mongoose";
 import { EstadoQuiz } from "@/app/types/quiz";
+import { OrigenGeneracion } from "@/app/types/quiz-ia";
 
 const QuizSchema = new Schema(
   {
@@ -10,6 +11,20 @@ const QuizSchema = new Schema(
       type: String,
       enum: Object.values(EstadoQuiz),
       default: EstadoQuiz.BORRADOR,
+    },
+    guiaId: { type: Schema.Types.ObjectId, ref: "Guia", index: true },
+    version: { type: Number, default: 1 },
+    configGeneracion: {
+      type: {
+        totalPreguntas: Number,
+        distribucion: Schema.Types.Mixed,
+      },
+      required: false,
+    },
+    origenGeneracion: {
+      type: String,
+      enum: Object.values(OrigenGeneracion),
+      default: OrigenGeneracion.MANUAL,
     },
     creadoEn: { type: Date, default: Date.now },
   },

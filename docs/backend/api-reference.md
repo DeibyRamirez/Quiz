@@ -28,6 +28,80 @@ Autenticación: cookie `eq_token` (JWT). El cliente usa `credentials: "include"`
 | PUT | `/usuarios/[id]/` | — | Actualizar (rol, etc.) |
 | DELETE | `/usuarios/[id]/` | — | Eliminar |
 
+## IA — Guías y generación de quizzes (v1)
+
+Requiere rol **docente** o **admin** (cookie JWT).
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| POST | `/v1/guides/upload/` | Docente | Subir PDF/DOCX (multipart) |
+| POST | `/v1/quizzes/generate/` | Docente | Generar quiz desde guía |
+| PATCH | `/v1/quizzes/[quizId]/refine/` | Docente | Refinar quiz con instrucción |
+
+### POST `/v1/guides/upload/`
+
+`Content-Type: multipart/form-data`
+
+| Campo | Tipo | Obligatorio |
+|-------|------|-------------|
+| `file` | File | Sí (PDF o DOCX, máx. 10 MB) |
+| `titulo` | string | No |
+| `cursoId` | string | No |
+
+Respuesta `201`:
+
+```json
+{
+  "guideId": "...",
+  "titulo": "Electrostática Unidad 3",
+  "tokenEstimate": 4520,
+  "cached": false
+}
+```
+
+### POST `/v1/quizzes/generate/`
+
+```json
+{
+  "guiaId": "...",
+  "titulo": "Quiz — Unidad 3",
+  "config": {
+    "totalPreguntas": 10,
+    "distribucion": {
+      "true_false": 2,
+      "single_choice": 4,
+      "multi_choice": 2,
+      "open_text": 2
+    }
+  }
+}
+```
+
+Respuesta `201`:
+
+```json
+{
+  "quizId": "...",
+  "titulo": "...",
+  "version": 1,
+  "questions": [ ... ]
+}
+```
+
+### PATCH `/v1/quizzes/[quizId]/refine/`
+
+```json
+{
+  "teacherInstruction": "Haz la pregunta 2 más difícil y agrega una de desarrollo sobre Coulomb"
+}
+```
+
+Respuesta `200`: mismo formato que generate, con `version` incrementada.
+
+Ver también: [modulo-quiz-ia.md](../dominio/modulo-quiz-ia.md).
+
+---
+
 ## Quizzes
 
 | Método | Ruta | Auth | Descripción |
@@ -135,3 +209,4 @@ Status: 400 validación, 401 no auth, 403 prohibido, 404 no encontrado, 409 dupl
 Servicios en `src/lib/client/services/`:
 
 - `auth.ts`, `usuarios.ts`, `quizzes.ts`, `preguntas.ts`, `sesiones.ts`
+- `guias.ts`, `quiz-ia.ts` (módulo IA v1)

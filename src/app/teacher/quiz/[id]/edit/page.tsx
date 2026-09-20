@@ -17,7 +17,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ArrowLeft, Save, Plus, Trash2, Edit, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { EstadoQuiz } from "@/app/types";
@@ -71,6 +71,7 @@ export default function EditQuizPage() {
   const [isSavingQuiz, setIsSavingQuiz] = useState(false);
   const [isSavingQuestion, setIsSavingQuestion] = useState(false);
   const [loading, setLoading] = useState(true);
+  const seccionEditarRef = useRef<HTMLDivElement>(null);
 
   const [questionForm, setQuestionForm] = useState<QuestionFormState>(DEFAULT_QUESTION_FORM);
   const [originalQuestionForm, setOriginalQuestionForm] =
@@ -123,6 +124,14 @@ export default function EditQuizPage() {
 
     cargar();
   }, [quizId, router]);
+
+  useEffect(() => {
+    if (!selectedQuestionId) return;
+    seccionEditarRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [selectedQuestionId]);
 
   const hasQuizChanges = () =>
     quizData.title !== originalQuizData.title ||
@@ -352,6 +361,8 @@ export default function EditQuizPage() {
   function editQuestion(q: QuestionUi) {
     setSelectedQuestionId(q.id);
     setQuestionType(q.questionType);
+    const numero = questions.findIndex((item) => item.id === q.id) + 1;
+    toast.info(numero > 0 ? `Editando pregunta ${numero}` : "Editando pregunta");
 
     const form: QuestionFormState = {
       question: q.question,
@@ -589,6 +600,11 @@ export default function EditQuizPage() {
           </CardContent>
         </Card>
 
+        <div
+          id="seccion-editar-pregunta"
+          ref={seccionEditarRef}
+          className="scroll-mt-24"
+        >
         <Card className="card-institutional">
           <CardHeader>
             <CardTitle className="heading-secondary">
@@ -910,6 +926,7 @@ export default function EditQuizPage() {
             </div>
           </CardContent>
         </Card>
+        </div>
       </main>
     </div>
   );

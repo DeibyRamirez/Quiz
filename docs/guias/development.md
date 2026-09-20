@@ -21,6 +21,17 @@ MONGODB_URI=mongodb://127.0.0.1:27017/Electroquiz
 JWT_SECRET=desarrollo-cambiar-en-produccion
 # Opcional
 NEXT_PUBLIC_API_URL=http://localhost:3000/api
+
+# IA — Vertex (preferido, cobra en la factura GCP) o AI Studio (créditos)
+VERTEX_PROJECT_ID=
+VERTEX_LOCATION=us-central1
+GOOGLE_SERVICE_ACCOUNT_JSON=
+GEMINI_API_KEY=
+GEMINI_BASE_URL=
+GEMINI_MODEL_FLASH=gemini-3.5-flash-lite
+GEMINI_MODEL_PRO=gemini-2.5-pro
+GEMINI_TOKEN_UMBRAL_PRO=12000
+GEMINI_MAX_UPLOAD_MB=10
 ```
 
 Verificar Mongo:
@@ -28,6 +39,20 @@ Verificar Mongo:
 ```bash
 npm run test:mongo
 ```
+
+Crear o restablecer el **docente semilla** (para probar el panel y Crear con IA):
+
+```bash
+npm run seed:docente
+```
+
+| Campo | Valor |
+|-------|--------|
+| Correo | `docente.semilla@uniautonoma.edu.co` |
+| Contraseña | `Semilla123` |
+| Rol | `docente` |
+
+Entrar en http://localhost:3000/login/ → panel `/teacher/` → **Crear con IA**.
 
 Arrancar dev (Next + Socket.io):
 

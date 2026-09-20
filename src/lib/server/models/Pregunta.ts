@@ -17,6 +17,8 @@ const PreguntaSchema = new Schema(
     puntos: { type: Number, default: 10 },
     tiempoLimite: { type: Number, default: 30 },
     explicacion: { type: String },
+    criteriosEvaluacion: { type: String },
+    requiereCorreccionManual: { type: Boolean, default: false },
     tema: { type: String },
     quizId: { type: String, required: true, index: true },
     activa: { type: Boolean, default: true },

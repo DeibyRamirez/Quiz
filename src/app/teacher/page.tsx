@@ -59,12 +59,20 @@ function TeacherDashboardContent() {
             <h1 className="heading-primary">Panel Docente</h1>
             <p className="body-text text-muted-foreground">Gestiona tus quizzes de fuerzas eléctricas</p>
           </div>
-          <Link href="/teacher/create">
-            <Button size="lg" className="btn-primary h-11">
-              <Plus className="mr-2 h-5 w-5" />
-              Crear Nuevo Quiz
-            </Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Link href="/teacher/create/ia/">
+              <Button size="lg" variant="outline" className="h-11">
+                <Plus className="mr-2 h-5 w-5" />
+                Crear con IA
+              </Button>
+            </Link>
+            <Link href="/teacher/create/">
+              <Button size="lg" className="btn-primary h-11">
+                <Plus className="mr-2 h-5 w-5" />
+                Crear Nuevo Quiz
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

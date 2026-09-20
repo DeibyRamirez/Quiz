@@ -23,7 +23,11 @@ const nextConfig = {
   },
   assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
   basePath: '',
-  distDir: '.next'
+  distDir: '.next',
+  // Evita que Webpack empaquete pdfjs-dist y rompa la ruta del worker.
+  experimental: {
+    serverComponentsExternalPackages: ['pdfjs-dist'],
+  },
 }
 
 export default nextConfig

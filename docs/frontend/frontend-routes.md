@@ -16,7 +16,8 @@ App Router (`src/app`). URLs con trailing slash en producción (config Next).
 | Ruta | Archivo | Descripción |
 |------|---------|-------------|
 | `/teacher` | `teacher/page.tsx` | Lista de quizzes del autor |
-| `/teacher/create` | `teacher/create/page.tsx` | Crear quiz + preguntas |
+| `/teacher/create` | `teacher/create/page.tsx` | Crear quiz + preguntas (manual) |
+| `/teacher/create/ia` | `teacher/create/ia/page.tsx` | Crear quiz con IA desde guía PDF/DOCX |
 | `/teacher/quiz/[id]/edit` | `teacher/quiz/[id]/edit/page.tsx` | Editar quiz |
 | `/teacher/quiz/[id]/live` | `teacher/quiz/[id]/live/page.tsx` | Sesión en vivo |
 | `/teacher/quiz/[id]/resultados` | `teacher/quiz/[id]/resultados/page.tsx` | Resultados agregados |
@@ -24,6 +25,7 @@ App Router (`src/app`). URLs con trailing slash en producción (config Next).
 Componentes compartidos:
 
 - `teacher/_components/quiz-form-shared.tsx`
+- `teacher/_components/ia/` — wizard IA (subir guía, configurar, preview/refinar)
 
 ## Estudiante (`ProtectedRoute`: estudiante)
 

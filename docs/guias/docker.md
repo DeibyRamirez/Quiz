@@ -95,18 +95,22 @@ Cuando conectes otros servicios o necesites más carga:
 cp .env.docker.example .env.docker
 ```
 
-Edita `.env.docker` si necesitas otro `JWT_SECRET`. Para el stack local, `MONGODB_URI` apunta al servicio `mongo` del compose:
+Copia también tus variables de Firebase desde `.env.local`. Para el stack local, `MONGODB_URI` apunta al servicio `mongo` del compose:
 
 ```env
 MONGODB_URI=mongodb://mongo:27017/Electroquiz
 JWT_SECRET=tu-secreto-largo
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_FIREBASE_API_KEY=...
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
+FIREBASE_SERVICE_ACCOUNT={"type":"service_account",...}
 ```
 
-### 2. Levantar stack completo
+Levantar con:
 
 ```bash
-docker compose up --build
+docker compose --env-file .env.docker up --build
 ```
 
 - App: http://localhost:3000  
@@ -141,7 +145,16 @@ MONGODB_URI=mongodb+srv://USER:PASS@cluster.mongodb.net/Electroquiz
 JWT_SECRET=secreto-produccion-largo
 NEXT_PUBLIC_APP_URL=https://tu-dominio.com
 NEXT_PUBLIC_API_URL=https://tu-dominio.com/api
+NEXT_PUBLIC_FIREBASE_API_KEY=...
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=tu-proyecto.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=tu-proyecto
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=tu-proyecto.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+NEXT_PUBLIC_FIREBASE_APP_ID=...
+FIREBASE_SERVICE_ACCOUNT={"type":"service_account",...}
 ```
+
+En Firebase Console → **Authentication → Settings → Authorized domains**, agrega `tu-dominio.com`.
 
 En Atlas → **Network Access** → permite la IP del servidor o `0.0.0.0/0` para pruebas.
 
@@ -159,6 +172,12 @@ docker compose --env-file .env.docker -f docker-compose.prod.yml up --build -d
 docker build \
   --build-arg NEXT_PUBLIC_APP_URL=https://tu-dominio.com \
   --build-arg NEXT_PUBLIC_API_URL=https://tu-dominio.com/api \
+  --build-arg NEXT_PUBLIC_FIREBASE_API_KEY=... \
+  --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=... \
+  --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID=... \
+  --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=... \
+  --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=... \
+  --build-arg NEXT_PUBLIC_FIREBASE_APP_ID=... \
   -t electro-quiz:latest .
 
 docker run -d \
@@ -166,6 +185,7 @@ docker run -d \
   -p 3000:3000 \
   -e MONGODB_URI="mongodb+srv://..." \
   -e JWT_SECRET="..." \
+  -e FIREBASE_SERVICE_ACCOUNT='{"type":"service_account",...}' \
   -e NEXT_PUBLIC_APP_URL="https://tu-dominio.com" \
   -e HOSTNAME=0.0.0.0 \
   electro-quiz:latest
@@ -184,12 +204,14 @@ docker run -d \
 |----------|--------|
 | `MONGODB_URI` | URI Atlas |
 | `JWT_SECRET` | Secreto fuerte |
+| `FIREBASE_SERVICE_ACCOUNT` | JSON cuenta de servicio (Google OAuth) |
 | `NEXT_PUBLIC_APP_URL` | `https://tu-app.onrender.com` |
 | `HOSTNAME` | `0.0.0.0` |
 
 5. **Build args** (si la URL pública se define en build):
 
    - `NEXT_PUBLIC_APP_URL` = misma URL de Render
+   - `NEXT_PUBLIC_FIREBASE_*` = mismos valores que en `.env.local`
 
 6. Start command: la imagen ya usa `npm run start` (incluye Socket.io).
 
@@ -205,6 +227,7 @@ docker run -d \
 | `JWT_SECRET` | Sí | Firma de tokens JWT |
 | `NEXT_PUBLIC_APP_URL` | Sí (prod) | Origin permitido en CORS de Socket.io |
 | `NEXT_PUBLIC_API_URL` | No | Si vacío, el cliente usa el mismo host |
+| `FIREBASE_SERVICE_ACCOUNT` | Sí (Google OAuth) | JSON cuenta de servicio Firebase Admin (runtime) |
 | `HOSTNAME` | Sí (Docker) | `0.0.0.0` para escuchar fuera del contenedor |
 | `PORT` | No | Default `3000` |
 
@@ -214,6 +237,7 @@ Build args (solo en `docker build` / compose `build.args`):
 |-----------|-----|
 | `NEXT_PUBLIC_APP_URL` | Inlined en cliente Next.js |
 | `NEXT_PUBLIC_API_URL` | Inlined en cliente Next.js |
+| `NEXT_PUBLIC_FIREBASE_*` | Config Firebase cliente (Google OAuth popup) |
 
 ---
 
@@ -236,6 +260,7 @@ Build args (solo en `docker build` / compose `build.args`):
 | Healthcheck falla | Mongo inaccesible o URI incorrecta | Revisar `MONGODB_URI` y firewall Atlas |
 | Cookie auth no funciona | API en dominio distinto al frontend | Mismo dominio para app y API (monolito) |
 | Build falla por env | Faltan placeholders en build | El Dockerfile ya incluye placeholders; revisa logs |
+| Google OAuth falla en Docker | Faltan `NEXT_PUBLIC_FIREBASE_*` en build o `FIREBASE_SERVICE_ACCOUNT` en runtime | Rebuild con `--env-file .env.docker`; revisa dominio en Firebase Console |
 
 ---
 

@@ -8,6 +8,8 @@ Convenciones usadas en Electro Quiz para mantener el código predecible entre fr
 |---------|-------|--------|-----------|-----------------|-----|
 | Usuario | `types/usuario.ts` | `Usuario.ts` | `validators/usuario.ts` | `services/usuarios.ts` | `api/usuarios` |
 | Quiz | `types/quiz.ts` | `Quiz.ts` | `validators/quiz.ts` | `services/quizzes.ts` | `api/quizzes` |
+| Guía (IA) | `types/guia.ts` | `Guia.ts` | `validators/guia.ts` | `services/guias.ts` | `api/v1/guides` |
+| Quiz IA | `types/quiz-ia.ts` | — | `validators/quiz-ia.ts` | `services/quiz-ia.ts` | `api/v1/quizzes` |
 | Pregunta | `types/pregunta.ts` | `Pregunta.ts` | `validators/pregunta.ts` | `services/preguntas.ts` | `api/preguntas` |
 | Sesión | `types/sesion.ts` | `SesionLive`, `ParticipanteSesion` | `validators/sesion.ts` | `services/sesiones.ts` | `api/sesiones` |
 

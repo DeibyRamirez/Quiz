@@ -4,33 +4,41 @@
 #
 # Uso:
 #   cp .env.docker.example .env.docker
-#   docker compose up --build
+#   docker compose --env-file .env.docker up --build
 #
 # Producción / Render / Fly:
 #   Despliega SOLO la imagen de la app (Dockerfile) y apunta MONGODB_URI a Atlas.
 #   No levantes el servicio `mongo` en la nube.
 #
-# Escalabilidad futura:
-#   - Réplicas del servicio `app` detrás de un balanceador con sticky sessions
-#   - Redis como adapter de Socket.io (ver docs/guias/docker.md)
+# Google OAuth:
+#   - NEXT_PUBLIC_FIREBASE_* → build args (cliente Firebase en el navegador)
+#   - FIREBASE_SERVICE_ACCOUNT → runtime vía .env.docker (API /api/auth/google)
+#
 # =============================================================================
 
+x-app-build-args: &app-build-args
+  NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+  NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000/api}
+  NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-}
+  NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY:-}
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-}
+  NEXT_PUBLIC_FIREBASE_DATABASE_URL: ${NEXT_PUBLIC_FIREBASE_DATABASE_URL:-}
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID:-}
+  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:-}
+  NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:-}
+  NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID:-}
+  NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: ${NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID:-}
+
 services:
-  # ---------------------------------------------------------------------------
-  # Base de datos — solo desarrollo / pruebas locales
-  # En producción usar MongoDB Atlas (M0 gratis) u otro cluster gestionado
-  # ---------------------------------------------------------------------------
   mongo:
     image: mongo:7
     container_name: electro-quiz-mongo
     restart: unless-stopped
     ports:
-      # Expuesto al host para Compass / mongosh durante desarrollo
       - "27017:27017"
     environment:
       MONGO_INITDB_DATABASE: Electroquiz
     volumes:
-      # Persistencia entre reinicios del contenedor
       - mongo_data:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
@@ -39,17 +47,12 @@ services:
       retries: 5
       start_period: 20s
 
-  # ---------------------------------------------------------------------------
-  # Aplicación — Next.js + API REST + Socket.io (un solo proceso Node)
-  # ---------------------------------------------------------------------------
   app:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        # URL pública desde el navegador (localhost al probar en tu máquina)
-        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000/api}
+        <<: *app-build-args
     container_name: electro-quiz-app
     restart: unless-stopped
     ports:
@@ -58,10 +61,19 @@ services:
       - path: .env.docker
         required: false
     environment:
-      # Sobrescribe / complementa .env.docker
       MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017/Electroquiz}
       JWT_SECRET: ${JWT_SECRET:-cambiar-en-produccion-secreto-largo}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      FIREBASE_SERVICE_ACCOUNT: ${FIREBASE_SERVICE_ACCOUNT:-}
+      VERTEX_PROJECT_ID: ${VERTEX_PROJECT_ID:-}
+      VERTEX_LOCATION: ${VERTEX_LOCATION:-us-central1}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${GOOGLE_SERVICE_ACCOUNT_JSON:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_BASE_URL: ${GEMINI_BASE_URL:-}
+      GEMINI_MODEL_FLASH: ${GEMINI_MODEL_FLASH:-gemini-3.5-flash-lite}
+      GEMINI_MODEL_PRO: ${GEMINI_MODEL_PRO:-gemini-2.5-pro}
+      GEMINI_TOKEN_UMBRAL_PRO: ${GEMINI_TOKEN_UMBRAL_PRO:-12000}
+      GEMINI_MAX_UPLOAD_MB: ${GEMINI_MAX_UPLOAD_MB:-10}
       HOSTNAME: 0.0.0.0
       PORT: 3000
     depends_on:

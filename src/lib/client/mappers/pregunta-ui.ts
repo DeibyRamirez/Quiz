@@ -10,7 +10,8 @@ export type QuestionTypeUi =
   | "multiple-choice"
   | "true-false"
   | "numerical"
-  | "exact-text";
+  | "exact-text"
+  | "open-text";
 
 export interface AnswerUi {
   id: string;
@@ -118,6 +119,14 @@ export function preguntaApiToUi(p: Pregunta): QuestionUi {
     };
   }
 
+  if (p.requiereCorreccionManual && p.criteriosEvaluacion) {
+    return {
+      ...base,
+      questionType: "open-text",
+      exactAnswerText: p.criteriosEvaluacion,
+    };
+  }
+
   if (esTipoRespuestaCorta(p.tipo)) {
     const raw =
       Array.isArray(p.respuestaCorrecta)
@@ -209,6 +218,16 @@ export function preguntaUiToCrear(
         caseSensitive: false,
       };
 
+    case "open-text":
+      return {
+        ...base,
+        tipo: TipoPregunta.RESPUESTA_CORTA,
+        respuestaCorrecta: "",
+        criteriosEvaluacion: q.exactAnswerText?.trim() ?? "",
+        requiereCorreccionManual: true,
+        tema: q.tema?.trim() ? encodeTema(q.tema) : undefined,
+      };
+
     default:
       return {
         ...base,
@@ -269,4 +288,5 @@ export const QUESTION_TYPE_LABELS: Record<QuestionTypeUi, string> = {
   "true-false": "Verdadero / Falso",
   numerical: "Numérica (con unidad)",
   "exact-text": "Respuesta exacta",
+  "open-text": "Desarrollo (corrección manual)",
 };

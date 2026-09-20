@@ -9,6 +9,7 @@ Mongoose pluraliza nombres de modelo → colecciones en minúsculas.
 | Modelo Mongoose | Colección Mongo | Descripción |
 |-----------------|-----------------|-------------|
 | `Usuario` | `usuarios` | Cuentas y roles |
+| `Guia` | `guias` | Guías de estudio extraídas (PDF/DOCX) |
 | `Quiz` | `quizzes` | Metadatos del quiz |
 | `Pregunta` | `preguntas` | Preguntas vinculadas por `quizId` |
 | `SesionLive` | `sesionlives` | Sesión en vivo (PIN, estado, timer) |
@@ -35,6 +36,25 @@ Mongoose pluraliza nombres de modelo → colecciones en minúsculas.
 
 ---
 
+## Guia
+
+**Archivo:** `src/lib/server/models/Guia.ts`  
+**Tipo:** `src/app/types/guia.ts`
+
+| Campo | Tipo | Notas |
+|-------|------|-------|
+| `docenteId` | string | ID del docente que subió la guía |
+| `cursoId` | string? | Referencia opcional a curso |
+| `titulo` | string | Nombre de la guía |
+| `hashArchivo` | string | SHA-256 del archivo (único) |
+| `contenidoMarkdown` | string | Texto extraído y sanitizado |
+| `estimacionTokens` | number | `length / 3.8` |
+| `creadoEn` | Date | |
+
+**Índices:** `hashArchivo` único, `{ docenteId, creadoEn }`
+
+---
+
 ## Quiz
 
 **Archivo:** `src/lib/server/models/Quiz.ts`  
@@ -46,9 +66,13 @@ Mongoose pluraliza nombres de modelo → colecciones en minúsculas.
 | `titulo` | string | |
 | `descripcion` | string | Default `""` |
 | `estado` | enum | `borrador`, `publicado` |
+| `guiaId` | ObjectId? | Ref a Guia (quizzes generados con IA) |
+| `version` | number | Default 1; incrementa en refine |
+| `configGeneracion` | object? | `{ totalPreguntas, distribucion }` |
+| `origenGeneracion` | enum | `manual`, `ia` |
 | `creadoEn` | Date | |
 
-**Índices:** `{ autorId: 1, creadoEn: -1 }`
+**Índices:** `{ autorId: 1, creadoEn: -1 }`, `guiaId`
 
 Las preguntas **no** se embeben; viven en colección `preguntas` con `quizId`.
 
@@ -71,6 +95,8 @@ Las preguntas **no** se embeben; viven en colección `preguntas` con `quizId`.
 | `puntos` | number | Default 10 |
 | `tiempoLimite` | number | Segundos, default 30 |
 | `explicacion` | string? | |
+| `criteriosEvaluacion` | string? | Guía de corrección (open_text / IA) |
+| `requiereCorreccionManual` | boolean | true = no auto-calificable en live |
 | `tema` | string? | Metadatos codificados (`topic:`, `unit:`) |
 | `quizId` | string | FK lógica a Quiz |
 | `activa` | boolean | Soft-disable al borrar quiz |

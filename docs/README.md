@@ -9,7 +9,7 @@ docs/
 ├── README.md                 ← estás aquí (índice general)
 ├── guias/                    Cómo instalar, desarrollar y desplegar
 ├── arquitectura/             Diseño técnico, stack y convenciones
-├── dominio/                  Reglas de negocio y flujos de usuario
+├── dominio/                  Reglas de negocio y flujos de usuario (incl. IA)
 ├── backend/                  API REST, auth y persistencia MongoDB
 ├── frontend/                 Rutas, páginas y componentes UI
 ├── tiempo-real/              Sesiones live, WebSockets y reconexión
@@ -108,6 +108,7 @@ flowchart TB
 | [business-logic.md](./dominio/business-logic.md) | Reglas de dominio por módulo |
 | [user-flows.md](./dominio/user-flows.md) | Flujos docente, estudiante, administrador |
 | [question-types.md](./dominio/question-types.md) | Tipos de pregunta, calificación Mongo ↔ UI |
+| [modulo-quiz-ia.md](./dominio/modulo-quiz-ia.md) | Generación de quizzes con IA desde guías PDF/DOCX |
 
 ### [backend/](./backend/README.md) — API y datos
 

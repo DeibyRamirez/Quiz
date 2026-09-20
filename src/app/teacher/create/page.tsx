@@ -17,7 +17,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ArrowLeft, Save, Plus, Trash2, Edit, X } from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { EstadoQuiz } from "@/app/types";
 import {
@@ -68,6 +68,7 @@ export default function CreateQuizUnified() {
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
   const [questionType, setQuestionType] = useState<QuestionTypeUi>("multiple-choice");
   const [isSavingQuestion, setIsSavingQuestion] = useState(false);
+  const seccionEditarRef = useRef<HTMLDivElement>(null);
 
   const [questionForm, setQuestionForm] = useState<QuestionFormState>(DEFAULT_QUESTION_FORM);
   const [originalQuestionForm, setOriginalQuestionForm] = useState<QuestionFormState>(DEFAULT_QUESTION_FORM);
@@ -98,6 +99,14 @@ export default function CreateQuizUnified() {
       toast.error("Error al cargar preguntas.")
     );
   }, [savedQuizId]);
+
+  useEffect(() => {
+    if (!selectedQuestionId) return;
+    seccionEditarRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [selectedQuestionId]);
 
   const hasQuizChanges = () =>
     quizData.title !== originalQuizData.title ||
@@ -345,6 +354,8 @@ export default function CreateQuizUnified() {
   function editQuestion(q: QuestionUi) {
     setSelectedQuestionId(q.id);
     setQuestionType(q.questionType);
+    const numero = questions.findIndex((item) => item.id === q.id) + 1;
+    toast.info(numero > 0 ? `Editando pregunta ${numero}` : "Editando pregunta");
 
     const form: QuestionFormState = {
       question: q.question,
@@ -589,6 +600,11 @@ export default function CreateQuizUnified() {
           </Card>
         )}
 
+        <div
+          id="seccion-editar-pregunta"
+          ref={seccionEditarRef}
+          className="scroll-mt-24"
+        >
         <Card className="card-institutional">
           <CardHeader>
             <CardTitle className="heading-secondary">
@@ -925,6 +941,7 @@ export default function CreateQuizUnified() {
             )}
           </CardContent>
         </Card>
+        </div>
       </main>
     </div>
   );

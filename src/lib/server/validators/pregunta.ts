@@ -33,9 +33,11 @@ const verdaderoFalsoSchema = preguntaBaseSchema.extend({
 const respuestaCortaSchema = preguntaBaseSchema.extend({
   tipo: z.literal(TipoPregunta.RESPUESTA_CORTA),
   respuestaCorrecta: z.union([
-    z.string().trim().min(1),
-    z.array(z.string().trim().min(1)).min(1),
-  ]),
+    z.string().trim(),
+    z.array(z.string().trim()).min(1),
+  ]).default(""),
+  criteriosEvaluacion: z.string().trim().optional(),
+  requiereCorreccionManual: z.boolean().optional().default(false),
   caseSensitive: z.boolean().optional().default(false),
   maxLength: z.number().int().positive().optional(),
 });
@@ -71,10 +73,15 @@ function validarRespuestaCorrecta(
       return typeof data.respuestaCorrecta === "boolean" ? null : "respuestaCorrecta inválida";
 
     case TipoPregunta.RESPUESTA_CORTA:
+      if (data.requiereCorreccionManual && data.criteriosEvaluacion?.trim()) {
+        return null;
+      }
       const respuestas = Array.isArray(data.respuestaCorrecta)
         ? data.respuestaCorrecta
         : [data.respuestaCorrecta];
-      return respuestas.length > 0 ? null : "respuestaCorrecta es obligatoria";
+      return respuestas.some((r) => String(r).trim())
+        ? null
+        : "respuestaCorrecta es obligatoria";
 
     default:
       return "Tipo de pregunta no soportado";
