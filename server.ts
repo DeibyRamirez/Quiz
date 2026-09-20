@@ -24,6 +24,10 @@ import { configurarSocketIO } from "./src/lib/server/socket/setup";
 
 const dev = process.env.NODE_ENV !== "production";
 const port = parseInt(process.env.PORT || "3000", 10);
+const socketPath = (() => {
+  const raw = (process.env.SOCKET_PATH ?? "/api/socket").trim();
+  return raw.startsWith("/") ? raw : `/${raw}`;
+})();
 
 /** Dirección de escucha HTTP. Render inyecta HOSTNAME con el id del contenedor → 502 si se usa para bind. */
 function resolveListenHost(): string {
@@ -50,7 +54,7 @@ app.prepare().then(() => {
   });
 
   const io = new SocketIOServer(httpServer, {
-    path: "/api/socket",
+    path: socketPath,
     addTrailingSlash: false,
     cors: {
       // Dev: cualquier origin. Prod: solo NEXT_PUBLIC_APP_URL (mismo dominio que la UI)
@@ -64,7 +68,7 @@ app.prepare().then(() => {
 
   httpServer.listen(port, listenHost, () => {
     console.log(`> Electro Quiz listo en http://${listenHost}:${port}`);
-    console.log(`> WebSocket Socket.io en path /api/socket`);
+    console.log(`> WebSocket Socket.io en path ${socketPath}`);
   });
 }).catch((err) => {
   console.error("Error al iniciar el servidor:", err);

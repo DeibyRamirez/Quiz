@@ -95,7 +95,7 @@ EXPOSE 3000
 
 # Comprueba app + conexión Mongo (requiere MONGODB_URI válida en runtime)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:3000/api/health/db/').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "const bp=(process.env.NEXT_PUBLIC_BASE_PATH||'').replace(/\\/+$/,''); const p1='http://127.0.0.1:3000/api/health/db/'; const p2='http://127.0.0.1:3000'+bp+'/api/health/db/'; fetch(p1).then(r=>r.ok?process.exit(0):fetch(p2).then(r2=>process.exit(r2.ok?0:1))).catch(()=>fetch(p2).then(r2=>process.exit(r2.ok?0:1)).catch(()=>process.exit(1)))"
 
 # IMPORTANTE: no usar `next start`; el WebSocket vive en server.ts
 CMD ["npm", "run", "start"]

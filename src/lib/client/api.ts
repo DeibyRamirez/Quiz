@@ -9,25 +9,41 @@ export class ApiError extends Error {
   }
 }
 
+function normalizarBasePath(input?: string | null): string {
+  const value = (input ?? "").trim();
+  if (!value || value === "/") return "";
+  return `/${value.replace(/^\/+|\/+$/g, "")}`;
+}
+
+function obtenerApiPorDefecto(): string {
+  const basePath = normalizarBasePath(process.env.NEXT_PUBLIC_BASE_PATH);
+  return basePath ? `${basePath}/api` : "/api";
+}
+
 function obtenerBaseUrlApi() {
   const configured = process.env.NEXT_PUBLIC_API_URL?.trim()?.replace(/\/+$/, "");
 
   if (typeof window !== "undefined") {
-    // Monolito: si la API configurada no coincide con el host actual, usar mismo origen
+    // Acepta rutas relativas para montar Quiz detrás de un prefijo interno (ej. /quiz-app/api).
+    if (configured?.startsWith("/")) {
+      return configured;
+    }
+
+    // Monolito: si la API configurada no coincide con el host actual, usar misma origin.
     if (configured) {
       try {
         if (new URL(configured).origin === window.location.origin) {
           return configured;
         }
       } catch {
-        /* URL inválida; caer a /api relativo */
+        /* URL inválida; caer al default relativo */
       }
     }
-    return "/api";
+    return obtenerApiPorDefecto();
   }
 
   if (configured) return configured;
-  return `http://127.0.0.1:${process.env.PORT ?? "3000"}/api`;
+  return `http://127.0.0.1:${process.env.PORT ?? "3000"}${obtenerApiPorDefecto()}`;
 }
 
 export function contruirUrlApi(path: string) {
