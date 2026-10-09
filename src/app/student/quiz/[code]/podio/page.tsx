@@ -17,8 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
-  Trophy,
-  Medal,
   ArrowLeft,
   Users,
   CheckCircle,
@@ -27,6 +25,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Navigation } from "@/components/navigation";
+import { PodioKahoot } from "@/components/podio-kahoot";
 import type { RespuestaParticipante } from "@/app/types/sesion";
 
 type UserResult = {
@@ -50,7 +49,6 @@ export default function QuizSummaryPage() {
       timeLimit: number;
     }>
   >([]);
-  const [topStudents, setTopStudents] = useState<UserResult[]>([]);
   const [allUsers, setAllUsers] = useState<UserResult[]>([]);
   const [me, setMe] = useState<UserResult | null>(null);
   const [myRank, setMyRank] = useState<number | null>(null);
@@ -91,7 +89,6 @@ export default function QuizSummaryPage() {
 
         if (users.length === 0) {
           setAllUsers([]);
-          setTopStudents([]);
           setMe(null);
           setMyRank(null);
           setLoading(false);
@@ -99,7 +96,6 @@ export default function QuizSummaryPage() {
         }
 
         const sorted = [...users].sort((a, b) => b.totalScore - a.totalScore);
-        setTopStudents(sorted.slice(0, 3));
         setAllUsers(sorted);
 
         const sesionUsuario = await obtenerUsuarioActual();
@@ -197,70 +193,17 @@ export default function QuizSummaryPage() {
           </Card>
         )}
 
-        {topStudents.length > 0 && (
-          <Card className="mb-8 overflow-hidden">
-            <CardHeader>
-              <CardTitle className="heading-secondary text-center">Podio de Ganadores</CardTitle>
-            </CardHeader>
-            <CardContent className="px-2 py-4 sm:px-6 sm:py-8 overflow-hidden">
-              <div className="mx-auto w-full max-w-[820px] mt-0 md:mt-10">
-                <div className="grid grid-cols-3 items-end justify-items-center gap-4 sm:gap-6 md:gap-10 min-w-0 mt-2">
-                  <div className="flex flex-col items-center min-w-0">
-                    <div className="flex items-center justify-center rounded-full bg-gradient-to-b from-gray-400 to-gray-600 text-white shadow-xl w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24">
-                      <Medal className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10" />
-                    </div>
-                    {topStudents[1] ? (
-                      <div className="bg-card rounded-lg shadow-lg text-center mt-2 px-4 py-2 w-20 sm:w-40 md:w-full max-w-full">
-                        <div className="font-bold text-muted-foreground text-xs sm:text-sm">2°</div>
-                        <div className="font-semibold truncate text-[11px] sm:text-sm" title={topStudents[1].name}>
-                          {topStudents[1].name}
-                        </div>
-                        <div className="font-bold text-muted-foreground text-[11px] sm:text-sm">
-                          {topStudents[1].totalScore} pts
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="h-0" />
-                    )}
-                  </div>
-
-                  <div className="flex flex-col items-center min-w-0 scale-[1.06] sm:scale-110 md:scale-125">
-                    <div className="flex items-center justify-center rounded-full bg-gradient-to-b from-yellow-400 to-yellow-600 text-white shadow-2xl w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 animate-bounce">
-                      <Trophy className="w-7 h-7 sm:w-9 sm:h-9 md:w-10 md:h-10" />
-                    </div>
-                    <div className="bg-card rounded-lg shadow-2xl text-center border-4 border-yellow-400 mt-2 px-2 py-2 w-28 sm:w-40 md:w-full max-w-full animate-pulse">
-                      <div className="font-bold text-yellow-600 text-xs sm:text-sm">1°</div>
-                      <div className="font-bold truncate text-[11px] sm:text-sm" title={topStudents[0].name}>
-                        {topStudents[0].name}
-                      </div>
-                      <div className="font-bold text-yellow-600 text-[11px] sm:text-sm">
-                        {topStudents[0].totalScore} pts
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-center min-w-0">
-                    <div className="flex items-center justify-center rounded-full bg-gradient-to-b from-orange-400 to-orange-600 text-white shadow-xl w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24">
-                      <Medal className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10" />
-                    </div>
-                    {topStudents[2] ? (
-                      <div className="bg-card rounded-lg shadow-lg text-center mt-2 px-4 py-2 w-20 sm:w-40 md:w-full max-w-full">
-                        <div className="font-bold text-orange-600 text-xs sm:text-sm">3°</div>
-                        <div className="font-semibold truncate text-[11px] sm:text-sm" title={topStudents[2].name}>
-                          {topStudents[2].name}
-                        </div>
-                        <div className="font-bold text-orange-600 text-[11px] sm:text-sm">
-                          {topStudents[2].totalScore} pts
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="h-0" />
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {allUsers.length > 0 && (
+          <div className="mb-8">
+            <PodioKahoot
+              titulo="Podio de ganadores"
+              ranking={allUsers.map((u) => ({
+                nombre: u.name,
+                puntos: u.totalScore,
+                destacado: me?.userId === u.userId,
+              }))}
+            />
+          </div>
         )}
 
         <div className="podio-stats-grid mb-8 sm:mb-10">

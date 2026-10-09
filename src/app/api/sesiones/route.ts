@@ -3,7 +3,7 @@ import { RolUsuario } from "@/app/types/usuario";
 import { conectarDB } from "@/lib/server/database";
 import { QuizModel } from "@/lib/server/models/Quiz";
 import { SesionLiveModel } from "@/lib/server/models/SesionLive";
-import { AuthError, requerirRol } from "@/lib/server/auth/requerir-auth";
+import { AuthError, requerirAccesoDocente } from "@/lib/server/auth/requerir-auth";
 import { crearSesionSchema } from "@/lib/server/validators/sesion";
 import {
   generarPinUnico,
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   try {
     await conectarDB();
 
-    const payload = await requerirRol([RolUsuario.DOCENTE, RolUsuario.ADMINISTRADOR]);
+    const payload = await requerirAccesoDocente();
     const body = await request.json();
     const { quizId } = crearSesionSchema.parse(body);
 
