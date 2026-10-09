@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { RolUsuario } from "@/app/types/usuario";
-import { AuthError, requerirRol } from "@/lib/server/auth/requerir-auth";
+import { AuthError, requerirAccesoDocente } from "@/lib/server/auth/requerir-auth";
 import { conectarDB } from "@/lib/server/database";
 import { GuiaService } from "@/lib/server/services/guia.service";
 import { manejarErrorApi, respuestaError } from "@/lib/server/utils/api-response";
@@ -10,10 +9,7 @@ export async function POST(request: Request) {
   try {
     await conectarDB();
 
-    const payload = await requerirRol([
-      RolUsuario.DOCENTE,
-      RolUsuario.ADMINISTRADOR,
-    ]);
+    const payload = await requerirAccesoDocente();
 
     const formData = await request.formData();
     const archivo = formData.get("file");

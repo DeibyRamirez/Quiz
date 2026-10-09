@@ -76,14 +76,24 @@ const preguntaIaMultiChoiceSchema = z.object({
   explanation: z.string().trim().optional(),
 });
 
-const preguntaIaOpenTextSchema = z.object({
-  type: z.literal("open_text"),
-  question: z.string().trim().min(1),
-  evaluationCriteria: z.string().trim().min(1),
-  explanation: z.string().trim().optional(),
-});
+const preguntaIaOpenTextSchema = z
+  .object({
+    type: z.literal("open_text"),
+    question: z.string().trim().min(1),
+    expectedAnswer: z.string().trim().min(1).optional(),
+    evaluationCriteria: z.string().trim().min(1).optional(),
+    explanation: z.string().trim().optional(),
+  })
+  .refine(
+    (data) => Boolean((data.expectedAnswer ?? data.evaluationCriteria ?? "").trim()),
+    {
+      message:
+        "expectedAnswer es obligatorio (respuesta corta exacta: palabra, número o siglas)",
+      path: ["expectedAnswer"],
+    }
+  );
 
-export const preguntaIaSchema = z.discriminatedUnion("type", [
+export const preguntaIaSchema = z.union([
   preguntaIaTrueFalseSchema,
   preguntaIaSingleChoiceSchema,
   preguntaIaMultiChoiceSchema,

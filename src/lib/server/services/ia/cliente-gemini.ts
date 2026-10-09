@@ -3,6 +3,23 @@ import { SYSTEM_PEDAGOGICAL_PROMPT } from "./quiz-engine.prompt";
 import { quizGeneradoIaSchema } from "@/lib/server/validators/quiz-ia";
 import type { QuizGeneradoIaValidado } from "@/lib/server/validators/quiz-ia";
 
+function normalizarQuizGeneradoIa(
+  data: QuizGeneradoIaValidado
+): QuizGeneradoIaValidado {
+  return {
+    ...data,
+    questions: data.questions.map((q) => {
+      if (q.type !== "open_text") return q;
+      const expected = (
+        q.expectedAnswer ??
+        q.evaluationCriteria ??
+        ""
+      ).trim();
+      return { ...q, expectedAnswer: expected };
+    }),
+  };
+}
+
 export class ErrorClienteIa extends Error {
   constructor(
     message: string,
@@ -203,7 +220,7 @@ export async function generarQuizConIa(
         );
       }
 
-      return validadoReintento.data;
+      return normalizarQuizGeneradoIa(validadoReintento.data);
     } catch {
       throw new ErrorClienteIa(
         "La respuesta del IA no cumple el esquema esperado."
@@ -211,5 +228,5 @@ export async function generarQuizConIa(
     }
   }
 
-  return validado.data;
+  return normalizarQuizGeneradoIa(validado.data);
 }

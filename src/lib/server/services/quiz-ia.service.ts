@@ -17,6 +17,7 @@ import { generarQuizConIa } from "@/lib/server/services/ia/cliente-gemini";
 import { seleccionarModelo } from "@/lib/server/services/ia/seleccion-modelo";
 import { GuiaService } from "@/lib/server/services/guia.service";
 import { serializarDocumentos } from "@/lib/server/utils/serializar";
+import { validarCrearPreguntaParaPersistencia } from "@/lib/server/validators/pregunta";
 import type { Pregunta } from "@/app/types/pregunta";
 
 export class ErrorQuizIa extends Error {
@@ -104,6 +105,19 @@ export class QuizIaService {
       quizId
     );
 
+    crearPreguntas.forEach((p, i) => {
+      try {
+        validarCrearPreguntaParaPersistencia(p);
+      } catch (e) {
+        const msg =
+          e instanceof Error ? e.message : "Pregunta generada inválida";
+        throw new ErrorQuizIa(
+          `La IA generó una pregunta inválida (posición ${i + 1}): ${msg}`,
+          422
+        );
+      }
+    });
+
     const preguntasInsertadas = await PreguntaModel.insertMany(crearPreguntas);
 
     return {
@@ -189,6 +203,20 @@ export class QuizIaService {
       quizRefinado.questions,
       quizId
     );
+
+    crearPreguntas.forEach((p, i) => {
+      try {
+        validarCrearPreguntaParaPersistencia(p);
+      } catch (e) {
+        const msg =
+          e instanceof Error ? e.message : "Pregunta generada inválida";
+        throw new ErrorQuizIa(
+          `La IA generó una pregunta inválida (posición ${i + 1}): ${msg}`,
+          422
+        );
+      }
+    });
+
     const nuevasPreguntas = await PreguntaModel.insertMany(crearPreguntas);
 
     const nuevaVersion = (quiz.version ?? 1) + 1;
