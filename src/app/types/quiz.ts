@@ -41,6 +41,17 @@ export function isQuizPublicado(quiz: Pick<QuizBase, "estado">): boolean {
   return quiz.estado === EstadoQuiz.PUBLICADO;
 }
 
+/** Etiqueta en UI: `publicado` se muestra como Listo. */
+export function etiquetaEstadoQuiz(estado: EstadoQuiz): string {
+  if (estado === EstadoQuiz.PUBLICADO) return "Listo";
+  if (estado === EstadoQuiz.BORRADOR) return "Borrador";
+  return estado;
+}
+
+export function esQuizListoParaUi(estado: EstadoQuiz): boolean {
+  return estado === EstadoQuiz.PUBLICADO;
+}
+
 export function validarQuiz(quiz: CrearQuiz | QuizBase): boolean {
   if (!quiz.autorId?.trim()) return false;
   if (!quiz.titulo?.trim()) return false;

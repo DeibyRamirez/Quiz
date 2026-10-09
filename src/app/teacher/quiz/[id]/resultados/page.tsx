@@ -19,9 +19,9 @@ import {
   Users,
   TrendingUp,
   Filter,
-  Medal,
 } from "lucide-react";
 import { Navigation } from "@/components/navigation";
+import { PodioKahoot } from "@/components/podio-kahoot";
 import { Progress } from "@/components/ui/progress";
 import { obtenerQuiz } from "@/lib/client/services/quizzes";
 import { obtenerResultadosQuiz } from "@/lib/client/services/sesiones";
@@ -98,7 +98,6 @@ export default function TeacherRespuestasPage() {
     highestScore: filteredAnswers[0]?.totalScore || 0,
   };
 
-  const top3 = filteredAnswers.slice(0, 3);
   const currentGroupName =
     selectedGroupName === "all" ? "Todas las sesiones" : selectedGroupName;
 
@@ -162,7 +161,7 @@ export default function TeacherRespuestasPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen min-h-[100dvh]">
         <div className="text-center">
           <div className="loading-spinner"></div>
           <p>Cargando resultados...</p>
@@ -173,7 +172,7 @@ export default function TeacherRespuestasPage() {
 
   if (allAnswers.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-screen px-4">
+      <div className="flex items-center justify-center min-h-screen min-h-[100dvh] px-4">
         <Card className="w-full max-w-sm p-6 sm:p-8 text-center shadow-lg">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold text-foreground flex flex-col items-center gap-3">
@@ -265,7 +264,7 @@ export default function TeacherRespuestasPage() {
         </Card>
 
         {/* ESTADÍSTICAS */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Participantes</CardTitle>
@@ -314,95 +313,16 @@ export default function TeacherRespuestasPage() {
           </Card>
         </div>
 
-        {/* PODIO */}
-        {top3.length > 0 && (
-          <Card className="mb-8 overflow-hidden">
-            <CardHeader>
-              <CardTitle className="heading-secondary text-center">
-                Top 3 de {currentGroupName}
-              </CardTitle>
-            </CardHeader>
-
-            <CardContent className="px-2 py-4 sm:px-6 sm:py-8 overflow-hidden">
-              <div className="mx-auto w-full max-w-[820px] mt-0 md:mt-10">
-                <div className="grid grid-cols-3 items-end justify-items-center gap-4 sm:gap-6 md:gap-10 min-w-0 mt-2">
-                  {/* 2° */}
-                  <div className="flex flex-col items-center min-w-0">
-                    <div className="flex items-center justify-center rounded-full bg-linear-to-b from-gray-400 to-gray-600 text-white shadow-xl w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24">
-                      <Medal className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10" />
-                    </div>
-
-                    {top3[1] ? (
-                      <div className="bg-card rounded-lg shadow-lg text-center mt-2 px-4 py-2 w-20 sm:w-40 md:w-full max-w-full">
-                        <div className="font-bold text-muted-foreground text-xs sm:text-sm">
-                          2°
-                        </div>
-                        <div
-                          className="font-semibold truncate text-[11px] sm:text-sm"
-                          title={top3[1].playerName}
-                        >
-                          {top3[1].playerName}
-                        </div>
-                        <div className="font-bold text-muted-foreground text-[11px] sm:text-sm">
-                          {top3[1].totalScore} pts
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="h-0" />
-                    )}
-                  </div>
-
-                  {/* 1° */}
-                  <div className="flex flex-col items-center min-w-0 scale-[1.06] sm:scale-110 md:scale-125">
-                    <div className="flex items-center justify-center rounded-full bg-linear-to-b from-yellow-400 to-yellow-600 text-white shadow-2xl w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 animate-bounce">
-                      <Trophy className="w-7 h-7 sm:w-9 sm:h-9 md:w-10 md:h-10" />
-                    </div>
-
-                    <div className="bg-card rounded-lg shadow-2xl text-center border-4 border-yellow-400 mt-2 px-2 py-2 w-28 sm:w-40 md:w-full max-w-full animate-pulse">
-                      <div className="font-bold text-yellow-600 text-xs sm:text-sm">
-                        1°
-                      </div>
-                      <div
-                        className="font-bold truncate text-[11px] sm:text-sm"
-                        title={top3[0].playerName}
-                      >
-                        {top3[0].playerName}
-                      </div>
-                      <div className="font-bold text-yellow-600 text-[11px] sm:text-sm">
-                        {top3[0].totalScore} pts
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 3° */}
-                  <div className="flex flex-col items-center min-w-0">
-                    <div className="flex items-center justify-center rounded-full bg-linear-to-b from-orange-400 to-orange-600 text-white shadow-xl w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24">
-                      <Medal className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10" />
-                    </div>
-
-                    {top3[2] ? (
-                      <div className="bg-card rounded-lg shadow-lg text-center mt-2 px-4 py-2 w-20 sm:w-40 md:w-full max-w-full">
-                        <div className="font-bold text-orange-600 text-xs sm:text-sm">
-                          3°
-                        </div>
-                        <div
-                          className="font-semibold truncate text-[11px] sm:text-sm"
-                          title={top3[2].playerName}
-                        >
-                          {top3[2].playerName}
-                        </div>
-                        <div className="font-bold text-orange-600 text-[11px] sm:text-sm">
-                          {top3[2].totalScore} pts
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="h-0" />
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {filteredAnswers.length > 0 && (
+          <div className="mb-8">
+            <PodioKahoot
+              titulo={`Podio de ${currentGroupName}`}
+              ranking={filteredAnswers.map((u) => ({
+                nombre: u.playerName,
+                puntos: u.totalScore,
+              }))}
+            />
+          </div>
         )}
 
         {/* ===== Análisis por pregunta (para TODOS en el grupo filtrado) ===== */}
