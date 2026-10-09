@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { conectarDB } from "@/lib/server/database";
 import { ParticipanteSesionModel } from "@/lib/server/models/ParticipanteSesion";
+import { TipoPregunta } from "@/app/types/pregunta";
 import { PreguntaModel } from "@/lib/server/models/Pregunta";
 import { SesionLiveModel } from "@/lib/server/models/SesionLive";
 import { AuthError, requerirAuth } from "@/lib/server/auth/requerir-auth";
@@ -60,9 +61,14 @@ export async function POST(request: Request, { params }: Params) {
       return respuestaError("Pregunta no válida", 400);
     }
 
+    const claveCalificar =
+      pregunta.tipo === TipoPregunta.MULTIPLE_OPCION ||
+      pregunta.tipo === TipoPregunta.VERDADERO_FALSO
+        ? datos.answerId.trim()
+        : (datos.answerText ?? datos.answerId).trim();
     const resultado = calificarRespuesta(
       pregunta,
-      datos.answerId,
+      claveCalificar,
       datos.timeLeft
     );
 
@@ -90,6 +96,7 @@ export async function POST(request: Request, { params }: Params) {
       pointsEarned: resultado.pointsEarned,
       totalScore: participante.totalScore,
       alreadyAnswered: false,
+      similitud: resultado.similitud,
     });
   } catch (error) {
     if (error instanceof AuthError) {

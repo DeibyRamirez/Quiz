@@ -4,6 +4,8 @@ import {
   type Pregunta,
   type ActualizarPregunta,
 } from "@/app/types";
+import { normalizarTexto } from "@/lib/similitud-texto";
+import { urlPublicaImagenReferencia } from "@/lib/recursos-quiz-url";
 
 /** Tipos en el formulario docente (no son el `tipo` de Mongo). */
 export type QuestionTypeUi =
@@ -36,6 +38,9 @@ export interface QuestionUi {
   correctOption?: string;
   correctValue?: number;
   unit?: string;
+  imageUrl?: string;
+  imagenReferencia?: string;
+  revisadaPorDocente?: boolean;
 }
 
 const UNIT_PREFIX = "unit:";
@@ -78,6 +83,11 @@ export function encodeTema(topic?: string, unit?: string): string | undefined {
 
 export function preguntaApiToUi(p: Pregunta): QuestionUi {
   const { topic, unit } = decodeTema(p.tema);
+  const imagenReferencia = (p as Pregunta & { imagenReferencia?: string })
+    .imagenReferencia;
+  const revisadaPorDocente = Boolean(
+    (p as Pregunta & { revisadaPorDocente?: boolean }).revisadaPorDocente
+  );
   const base = {
     id: p.id,
     quizId: p.quizId,
@@ -87,6 +97,9 @@ export function preguntaApiToUi(p: Pregunta): QuestionUi {
     timeLimit: p.tiempoLimite,
     activa: p.activa,
     tema: topic,
+    imageUrl: urlPublicaImagenReferencia(imagenReferencia),
+    imagenReferencia,
+    revisadaPorDocente,
   };
 
   if (p.tipo === TipoPregunta.MULTIPLE_OPCION) {
@@ -119,11 +132,17 @@ export function preguntaApiToUi(p: Pregunta): QuestionUi {
     };
   }
 
-  if (p.requiereCorreccionManual && p.criteriosEvaluacion) {
+  if (p.requiereCorreccionManual || (p.criteriosEvaluacion && p.criteriosEvaluacion.trim())) {
+    const legacyAnswer =
+      String(
+        Array.isArray(p.respuestaCorrecta)
+          ? p.respuestaCorrecta[0]
+          : p.respuestaCorrecta ?? ""
+      ).trim() || (p.criteriosEvaluacion ?? "").trim();
     return {
       ...base,
-      questionType: "open-text",
-      exactAnswerText: p.criteriosEvaluacion,
+      questionType: "exact-text",
+      exactAnswerText: legacyAnswer,
     };
   }
 
@@ -222,10 +241,9 @@ export function preguntaUiToCrear(
       return {
         ...base,
         tipo: TipoPregunta.RESPUESTA_CORTA,
-        respuestaCorrecta: "",
-        criteriosEvaluacion: q.exactAnswerText?.trim() ?? "",
-        requiereCorreccionManual: true,
+        respuestaCorrecta: q.exactAnswerText?.trim() ?? "",
         tema: q.tema?.trim() ? encodeTema(q.tema) : undefined,
+        caseSensitive: false,
       };
 
     default:
@@ -252,41 +270,92 @@ export function preguntaUiToActualizar(
   );
 }
 
-/** Compara la respuesta del estudiante con la pregunta en UI (Kahoot: una sola respuesta correcta). */
+/** Compara la respuesta del estudiante con la pregunta en UI. */
 export function verificarRespuestaUi(
   q: QuestionUi,
   respuestaEstudiante: string
 ): boolean {
+  return evaluarRespuestaUi(q, respuestaEstudiante).correct;
+}
+
+export function evaluarRespuestaUi(
+  q: QuestionUi,
+  respuestaEstudiante: string
+): { correct: boolean; similitud?: number } {
   if (q.questionType === "numerical") {
     const student = parseFloat(respuestaEstudiante.replace(",", "."));
     const correct = q.correctValue ?? 0;
-    if (Number.isNaN(student)) return false;
-    return student === correct;
+    if (Number.isNaN(student)) return { correct: false };
+    return { correct: student === correct };
   }
 
-  if (q.questionType === "exact-text") {
-    const student = respuestaEstudiante.trim();
-    const correct = (q.exactAnswerText ?? "").trim();
-    return student.toLowerCase() === correct.toLowerCase();
+  if (q.questionType === "exact-text" || q.questionType === "open-text") {
+    const student = normalizarTexto(respuestaEstudiante);
+    const correct = normalizarTexto((q.exactAnswerText ?? "").trim());
+    if (!correct) return { correct: false };
+    return { correct: student === correct };
   }
 
   if (q.questionType === "true-false") {
     const esTrue =
       respuestaEstudiante === "true" || respuestaEstudiante === "Verdadero";
-    return q.correctOption === (esTrue ? "true" : "false");
+    return { correct: q.correctOption === (esTrue ? "true" : "false") };
   }
 
   if (q.questionType === "multiple-choice") {
-    return q.correctOption === respuestaEstudiante;
+    if (q.permiteMultiples) {
+      const elegidas = respuestaEstudiante
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .sort();
+      const correctas = (q.options ?? [])
+        .filter((o) => o.isCorrect)
+        .map((o) => o.id)
+        .sort();
+      return {
+        correct:
+          elegidas.length === correctas.length &&
+          elegidas.every((id, i) => id === correctas[i]),
+      };
+    }
+    if (q.correctOption === respuestaEstudiante) {
+      return { correct: true };
+    }
+    const opcionCorrecta = (q.options ?? []).find((o) => o.isCorrect);
+    if (opcionCorrecta) {
+      const studentNorm = respuestaEstudiante.trim().toLowerCase();
+      const textNorm = opcionCorrecta.text.trim().toLowerCase();
+      if (studentNorm === textNorm) return { correct: true };
+    }
+    return { correct: false };
   }
 
-  return false;
+  return { correct: false };
 }
 
 export const QUESTION_TYPE_LABELS: Record<QuestionTypeUi, string> = {
   "multiple-choice": "Opción múltiple",
   "true-false": "Verdadero / Falso",
-  numerical: "Numérica (con unidad)",
-  "exact-text": "Respuesta exacta",
-  "open-text": "Desarrollo (corrección manual)",
+  numerical: "Respuesta corta",
+  "exact-text": "Respuesta corta",
+  "open-text": "Respuesta corta",
 };
+
+/** Etiqueta corta para la pantalla de juego del estudiante. */
+export function etiquetaTipoPreguntaPlay(
+  q: Pick<QuestionUi, "questionType" | "permiteMultiples">
+): string {
+  switch (q.questionType) {
+    case "true-false":
+      return "Falso/verdadero";
+    case "multiple-choice":
+      return q.permiteMultiples ? "Opción múltiple" : "Opción única";
+    case "numerical":
+    case "exact-text":
+    case "open-text":
+      return "Respuesta corta";
+    default:
+      return "Pregunta";
+  }
+}

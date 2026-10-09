@@ -35,7 +35,14 @@ export const DEFAULT_QUESTION_FORM: QuestionFormState = {
 };
 
 export const TIME_OPTIONS = ["15", "30", "45", "60", "90", "120"];
-export const POINTS_OPTIONS = ["50", "100", "200", "300", "500"];
+export const POINTS_OPTIONS = ["50", "100", "200", "300", "500", "1000"];
+
+/** Campos de escritura: fondo sólido legible sobre tarjetas. */
+export const textareaFormularioSolido =
+  "bg-white text-black border-border placeholder:text-neutral-500";
+
+export const inputFormularioSolido =
+  "bg-white text-black border-border placeholder:text-neutral-500";
 
 export function FieldGroup({
   label,
@@ -75,6 +82,9 @@ export function buildCanSaveQuestion(
 ): boolean {
   if (!questionForm.question.trim()) return false;
 
+  const puntos = Number(questionForm.points);
+  if (!Number.isFinite(puntos) || puntos <= 0) return false;
+
   if (questionType === "multiple-choice") {
     const allFilled = answers.every((a) => a.text.trim().length > 0);
     const hasCorrect = answers.some((a) => a.isCorrect);
@@ -90,12 +100,10 @@ export function buildCanSaveQuestion(
   }
 
   if (questionType === "numerical") {
-    const trimmed = numericalInput.trim();
-    if (!trimmed || !numericalUnit) return false;
-    return !Number.isNaN(parseFloat(trimmed));
+    return numericalInput.trim().length > 0;
   }
 
-  if (questionType === "exact-text") {
+  if (questionType === "exact-text" || questionType === "open-text") {
     return exactAnswerText.trim().length > 0;
   }
 
