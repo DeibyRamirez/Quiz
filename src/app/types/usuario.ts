@@ -13,6 +13,8 @@ export interface Usuario extends EntidadBase, Timestamps {
   nombre: string;
   correo: string;
   rol: RolUsuario;
+  /** Aprobado por un administrador; requerido para panel docente e IA */
+  verificado?: boolean;
   /** UID de Firebase cuando el perfil viene de Google OAuth */
   firebaseUid?: string;
   contraseña?: string;

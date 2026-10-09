@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { RolUsuario } from "@/app/types/usuario";
 
 export const loginSchema = z.object({
   correo: z.string().trim().email("Correo inválido"),
@@ -12,9 +11,6 @@ export const registroSchema = z.object({
   contraseña: z
     .string()
     .min(6, "La contraseña debe tener al menos 6 caracteres"),
-  rol: z
-    .enum([RolUsuario.ESTUDIANTE, RolUsuario.DOCENTE])
-    .default(RolUsuario.ESTUDIANTE),
 });
 
 export const googleAuthSchema = z.object({

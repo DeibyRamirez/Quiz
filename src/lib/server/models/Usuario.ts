@@ -18,6 +18,7 @@ const UsuarioSchema = new Schema(
       default: RolUsuario.ESTUDIANTE,
     },
     firebaseUid: { type: String, trim: true, sparse: true, index: true },
+    verificado: { type: Boolean, default: false },
     creadoEn: { type: Date, default: Date.now },
   },
   {

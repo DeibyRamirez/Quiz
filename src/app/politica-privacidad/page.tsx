@@ -4,9 +4,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-    title: "Política de Privacidad y Tratamiento de Datos | ElectroQuiz",
+    title: "Política de Privacidad y Tratamiento de Datos | QuimeQuiz",
     description:
-        "Política de privacidad y tratamiento de datos personales de ElectroQuiz (complemento de la app C_F_E).",
+        "Política de privacidad y tratamiento de datos personales de QuimeQuiz (complemento de la app C_F_E).",
     robots: { index: true, follow: true },
 };
 
@@ -24,8 +24,8 @@ export default function PoliticaPrivacidadPage() {
                     Última actualización: <strong>{updatedAt}</strong>
                 </p>
                 <p className="mt-14 body-text">
-                    Esta Política describe cómo <strong>ElectroQuiz</strong> (sitio web) trata los datos
-                    personales de sus usuarios. ElectroQuiz es un complemento de la aplicación móvil{" "}
+                    Esta Política describe cómo <strong>QuimeQuiz</strong> (sitio web) trata los datos
+                    personales de sus usuarios. QuimeQuiz es un complemento de la aplicación móvil{" "}
                     <strong>C_F_E</strong> orientada al aprendizaje de Física II (Electromagnetismo).
                 </p>
             </header>
@@ -35,7 +35,7 @@ export default function PoliticaPrivacidadPage() {
                     <h2 className="heading-tertiary">1. Responsable del tratamiento</h2>
                     <ul className="mt-3 list-disc pl-6">
                         <li>
-                            Responsable: <strong>ElectroQuiz</strong> (Proyecto académico/educativo)
+                            Responsable: <strong>QuimeQuiz</strong> (Proyecto académico/educativo)
                         </li>
                         <li>
                             Correo de contacto: <strong>davidurrutiaceron200507@gmail.com</strong>
@@ -69,7 +69,7 @@ export default function PoliticaPrivacidadPage() {
                         </li>
                     </ul>
                     <p className="mt-3">
-                        ElectroQuiz usa servicios de <strong>Firebase (Google)</strong> como base de datos/autenticación.
+                        QuimeQuiz usa servicios de <strong>Firebase (Google)</strong> como base de datos/autenticación.
                     </p>
                 </section>
 
@@ -93,7 +93,7 @@ export default function PoliticaPrivacidadPage() {
                 <section>
                     <h2 className="heading-tertiary">4. Base legal y autorización</h2>
                     <p className="mt-3">
-                        Al registrarte, iniciar sesión o usar ElectroQuiz, autorizas el tratamiento de tus datos
+                        Al registrarte, iniciar sesión o usar QuimeQuiz, autorizas el tratamiento de tus datos
                         para las finalidades descritas. Cuando sea requerido, solicitaremos consentimiento para cookies
                         no esenciales (p. ej., medición/anuncios).
                     </p>

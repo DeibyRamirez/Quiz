@@ -95,14 +95,19 @@ export async function GET(request: NextRequest) {
     await conectarDB();
 
     // Upsert: crea si no existe, actualiza nombre y rol siempre
+    const setFields: Record<string, unknown> = {
+      nombre: payload.nombre,
+      correo: payload.email.toLowerCase(),
+      rol: quizRol,
+    };
+    if (quizRol === RolUsuario.DOCENTE) {
+      setFields.verificado = true;
+    }
+
     const usuario = await UsuarioModel.findOneAndUpdate(
       { correo: payload.email.toLowerCase() },
       {
-        $set: {
-          nombre: payload.nombre,
-          correo: payload.email.toLowerCase(),
-          rol: quizRol,
-        },
+        $set: setFields,
         $setOnInsert: { creadoEn: new Date() },
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }

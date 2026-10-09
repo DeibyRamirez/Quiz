@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { conectarDB } from "@/lib/server/database";
 import { UsuarioModel } from "@/lib/server/models/Usuario";
+import { RolUsuario } from "@/app/types/usuario";
 import { registroSchema } from "@/lib/server/validators/auth";
 import { hashPassword } from "@/lib/server/auth/password";
 import { COOKIE_NAME, signToken } from "@/lib/server/auth/jwt";
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
       nombre: datos.nombre,
       correo: datos.correo.toLowerCase(),
       contraseña: contraseñaHash,
-      rol: datos.rol,
+      rol: RolUsuario.ESTUDIANTE,
     });
 
     const usuarioPublico = serializarDocumento(usuario.toObject());

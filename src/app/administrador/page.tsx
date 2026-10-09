@@ -10,7 +10,7 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Navigation } from "@/components/navigation";
-import { Edit, Trash2, Users } from "lucide-react";
+import { CheckCircle, Edit, Trash2, Users } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -63,10 +63,14 @@ function DashboardAdministradorContent() {
 
   const handleEditar = async (id: string) => {
     if (!newRole) return;
+    const payload: { rol: RolUsuario; verificado?: boolean } = { rol: newRole };
+    if (newRole === RolUsuario.DOCENTE) {
+      payload.verificado = true;
+    }
     try {
-      await actualizarUsuario(id, { rol: newRole });
+      const actualizado = await actualizarUsuario(id, payload);
       setUsuarios((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, rol: newRole } : u))
+        prev.map((u) => (u.id === id ? { ...u, ...actualizado } : u))
       );
       setEditUser(null);
       setNewRole("");
@@ -74,6 +78,19 @@ function DashboardAdministradorContent() {
     } catch (error) {
       console.error("Error al actualizar rol:", error);
       toast.error("Error al actualizar rol.");
+    }
+  };
+
+  const handleVerificar = async (id: string) => {
+    try {
+      const actualizado = await actualizarUsuario(id, { verificado: true });
+      setUsuarios((prev) =>
+        prev.map((u) => (u.id === id ? { ...u, ...actualizado } : u))
+      );
+      toast.success("Usuario verificado.");
+    } catch (error) {
+      console.error("Error al verificar usuario:", error);
+      toast.error("No se pudo verificar al usuario.");
     }
   };
 
@@ -119,6 +136,9 @@ function DashboardAdministradorContent() {
                       <th className="p-3 text-foreground font-semibold">Nombre</th>
                       <th className="p-3 text-foreground font-semibold">Correo</th>
                       <th className="p-3 text-center text-foreground font-semibold">Rol</th>
+                      <th className="p-3 text-center text-foreground font-semibold">
+                        Verificado
+                      </th>
                       <th className="p-3 text-center text-foreground font-semibold">Acciones</th>
                     </tr>
                   </thead>
@@ -177,7 +197,29 @@ function DashboardAdministradorContent() {
                           )}
                         </td>
                         <td className="p-3 text-center">
-                          <div className="flex justify-center gap-2">
+                          {user.verificado ? (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium badge-primary">
+                              Sí
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                              Pendiente
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 text-center">
+                          <div className="flex justify-center gap-2 flex-wrap">
+                            {!user.verificado && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleVerificar(user.id)}
+                                className="border-secondary text-secondary hover:bg-secondary hover:text-secondary-foreground"
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Verificar
+                              </Button>
+                            )}
                             <Button
                               variant="outline"
                               size="sm"

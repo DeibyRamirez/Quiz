@@ -12,6 +12,13 @@ export const crearUsuarioSchema = z.object({
     .optional(),
   rol: rolUsuarioSchema.default(RolUsuario.ESTUDIANTE),
   firebaseUid: z.string().trim().min(1).optional(),
+  verificado: z.boolean().optional(),
 });
 
-export const actualizarUsuarioSchema = crearUsuarioSchema.partial();
+export const actualizarUsuarioSchema = z.object({
+  nombre: z.string().trim().min(1).optional(),
+  rol: rolUsuarioSchema.optional(),
+  verificado: z.boolean().optional(),
+});
+
+export const actualizarUsuarioAdminSchema = actualizarUsuarioSchema;
