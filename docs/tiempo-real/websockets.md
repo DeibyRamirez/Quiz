@@ -1,6 +1,6 @@
 # WebSockets con Socket.io
 
-Guía de la arquitectura en tiempo real de **Electro Quiz**: cómo funciona, por qué está diseñada así y cómo depurarla.
+Guía de la arquitectura en tiempo real de **QuimeQuiz**: cómo funciona, por qué está diseñada así y cómo depurarla.
 
 ## Idea central
 

@@ -77,6 +77,7 @@ export async function enviarRespuestaSesion(
   pointsEarned: number;
   totalScore: number;
   alreadyAnswered: boolean;
+  similitud?: number;
 }> {
   return apiRequest(`/sesiones/${pin}/respuestas`, {
     method: "POST",

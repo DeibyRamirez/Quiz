@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import type { UsuarioPublico } from "@/app/types/usuario";
 import { conectarDB } from "@/lib/server/database";
 import { UsuarioModel } from "@/lib/server/models/Usuario";
+import { COOKIE_NAME, signToken } from "@/lib/server/auth/jwt";
 import { obtenerPayloadSesion } from "@/lib/server/auth/session";
 import { serializarDocumento } from "@/lib/server/utils/serializar";
 
@@ -21,7 +23,26 @@ export async function GET() {
       return NextResponse.json({ error: "Usuario no encontrado" }, { status: 401 });
     }
 
-    return NextResponse.json(serializarDocumento(usuario));
+    const usuarioPublico = serializarDocumento<UsuarioPublico>(usuario);
+    const response = NextResponse.json(usuarioPublico);
+
+    if (usuarioPublico.rol !== payload.rol) {
+      const token = await signToken({
+        sub: usuarioPublico.id,
+        correo: usuarioPublico.correo,
+        nombre: usuarioPublico.nombre,
+        rol: usuarioPublico.rol,
+      });
+      response.cookies.set(COOKIE_NAME, token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+    }
+
+    return response;
   } catch (error) {
     const mensaje =
       error instanceof Error ? error.message : "Error al obtener sesión";

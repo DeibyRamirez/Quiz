@@ -4,7 +4,8 @@ import type {
   Quiz,
   QuizConPreguntas,
 } from "@/app/types";
-import { apiRequest } from "@/lib/client/api";
+import { ApiError, apiRequest } from "@/lib/client/api";
+import { EstadoQuiz } from "@/app/types/quiz";
 
 export async function listarQuizzes(autorId?: string): Promise<Quiz[]> {
   const qs = autorId ? `?autorId=${encodeURIComponent(autorId)}` : "";
@@ -34,6 +35,42 @@ export async function actualizarQuiz(
 
 export async function eliminarQuiz(id: string): Promise<void> {
   await apiRequest(`/quizzes/${id}`, { method: "DELETE" });
+}
+
+export type ErrorVerificacionQuiz = {
+  preguntaId: string;
+  indice: number;
+  textoCorto: string;
+  mensaje: string;
+};
+
+export type ResultadoVerificacionQuiz = {
+  estado: EstadoQuiz;
+  preguntasValidadas: number;
+};
+
+export async function verificarQuizDocente(
+  quizId: string
+): Promise<ResultadoVerificacionQuiz> {
+  const data = await apiRequest<{
+    estado: EstadoQuiz;
+    preguntasValidadas: number;
+  }>(`/quizzes/${quizId}/verificar-docente`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+  return {
+    estado: data.estado,
+    preguntasValidadas: data.preguntasValidadas,
+  };
+}
+
+export function extraerErroresVerificacionQuiz(
+  error: unknown
+): ErrorVerificacionQuiz[] | null {
+  if (!(error instanceof ApiError) || error.status !== 422) return null;
+  const detalles = error.detalles as { errores?: ErrorVerificacionQuiz[] } | undefined;
+  return detalles?.errores ?? null;
 }
 
 export function formatearFechaQuiz(valor?: string | Date | null): string {

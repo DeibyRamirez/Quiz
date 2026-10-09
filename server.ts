@@ -67,7 +67,7 @@ app.prepare().then(() => {
   setSocketIO(io);
 
   httpServer.listen(port, listenHost, () => {
-    console.log(`> Electro Quiz listo en http://${listenHost}:${port}`);
+    console.log(`> QuimeQuiz listo en http://${listenHost}:${port}`);
     console.log(`> WebSocket Socket.io en path ${socketPath}`);
   });
 }).catch((err) => {

@@ -7,14 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { RolUsuario } from "@/app/types";
 import { establecerSesionCache } from "@/lib/client/auth";
 import { registrarUsuario, redirigirPorRol } from "@/lib/client/services/auth";
 
@@ -23,7 +15,6 @@ export default function RegistroPage() {
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
   const [contraseña, setContraseña] = useState("");
-  const [rol, setRol] = useState<RolUsuario>(RolUsuario.ESTUDIANTE);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -37,7 +28,6 @@ export default function RegistroPage() {
         nombre,
         correo,
         contraseña,
-        rol,
       });
       establecerSesionCache(usuario);
       redirigirPorRol(usuario.rol, router);
@@ -56,7 +46,7 @@ export default function RegistroPage() {
         <img src="/logo_universidad.png" alt="Logo" className="w-32 mx-auto mb-6" />
         <h1 className="heading-secondary text-center mb-2">Crear cuenta</h1>
         <p className="body-small text-muted-foreground mb-6 text-center">
-          Regístrate para usar ElectroQuiz
+          Regístrate para usar QuimeQuiz con tu correo institucional.
         </p>
 
         <form onSubmit={handleRegistro} className="space-y-4">
@@ -96,19 +86,6 @@ export default function RegistroPage() {
               autoComplete="new-password"
               className="input-institutional"
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Tipo de cuenta</Label>
-            <Select value={rol} onValueChange={(v) => setRol(v as RolUsuario)}>
-              <SelectTrigger className="input-institutional">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={RolUsuario.ESTUDIANTE}>Estudiante</SelectItem>
-                <SelectItem value={RolUsuario.DOCENTE}>Docente</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           <Button type="submit" className="w-full btn-primary" disabled={loading}>

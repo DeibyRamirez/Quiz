@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Zap, Users, BookOpen, BarChart3 } from "lucide-react";
+import { Zap, Users, BookOpen, BarChart3, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 export default function HomePage() {
@@ -80,7 +80,7 @@ export default function HomePage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Zap className="h-8 w-8 text-primary" />
-              <h1 className="heading-tertiary">ElectroQuiz</h1>
+              <h1 className="heading-tertiary">QuimeQuiz</h1>
             </div>
           </div>
         </div>
@@ -90,10 +90,10 @@ export default function HomePage() {
       <main className="quiz-content flex-col items-start!">
         <div className="text-center mb-12 w-full">
           <h2 className="heading-primary text-balance mb-4">
-            Aprende Fuerzas Eléctricas de Forma Interactiva
+            Aprende de Forma Interactiva
           </h2>
           <p className="body-text text-muted-foreground text-pretty max-w-2xl mx-auto">
-            Plataforma educativa universitaria que transforma el aprendizaje de física eléctrica en una experiencia
+            Plataforma educativa universitaria que transforma el aprendizaje en una experiencia
             dinámica y participativa.
           </p>
         </div>
@@ -104,7 +104,7 @@ export default function HomePage() {
             <CardHeader>
               <Users className="h-12 w-12 text-primary mx-auto mb-2" />
               <CardTitle className="text-primary">Para Docentes</CardTitle>
-              <CardDescription>Crea y gestiona quizzes interactivos sobre fuerzas eléctricas</CardDescription>
+              <CardDescription>Crea y gestiona quizzes interactivos</CardDescription>
             </CardHeader>
           </Card>
 
@@ -126,9 +126,13 @@ export default function HomePage() {
 
           <Card className="card-institutional text-center">
             <CardHeader>
-              <Zap className="h-12 w-12 text-secondary mx-auto mb-2" />
-              <CardTitle className="text-secondary">Física Eléctrica</CardTitle>
-              <CardDescription>Especializado en cálculo de fuerzas eléctricas universitarias</CardDescription>
+              <Sparkles className="h-12 w-12 text-secondary mx-auto mb-2" />
+              <CardTitle className="text-secondary">Integración de IA</CardTitle>
+              <CardDescription>
+                Próximamente podrás ampliar la carga de guías y documentos para crear
+                quizzes alineados con tu material. Explora la integración con IA desde
+                el panel docente.
+              </CardDescription>
             </CardHeader>
           </Card>
         </div>
@@ -177,7 +181,7 @@ export default function HomePage() {
       {/* Footer
       <footer className="border-t mt-60 py-6">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
-          <p>ElectroQuiz - Plataforma Educativa Universitaria para Fuerzas Eléctricas</p>
+          <p>QuimeQuiz - Plataforma Educativa Universitaria para Fuerzas Eléctricas</p>
           <Link className="underline" href="/politica-privacidad">
             Política de Privacidad
           </Link>

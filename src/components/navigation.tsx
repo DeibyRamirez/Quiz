@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
-import { Zap, Users, BookOpen, X, User } from "lucide-react"
+import { Users, BookOpen, X, User } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { salirQuiz } from "@/lib/salirQuiz"
-import type { UsuarioPublico } from "@/app/types"
+import { RolUsuario, type UsuarioPublico } from "@/app/types"
 import { obtenerUsuarioActual, cerrarSesionApp } from "@/lib/client/auth"
 
 const AVATAR_MOBILE = 44
@@ -58,19 +59,31 @@ export function Navigation({ pin }: { pin?: string }) {
 
   return (
     <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-      <div className="container mx-auto px-0 py-4">
+      <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1 min-w-0">
-            <Zap className="h-8 w-8 md:h-11 md:w-11 text-primary flex-none" />
+            <span
+              className="relative inline-flex h-7 w-7 shrink-0 md:h-9 md:w-9"
+              aria-hidden
+            >
+              <Image
+                src="/Icono.png"
+                alt=""
+                fill
+                className="object-contain object-center"
+                sizes="(max-width: 768px) 28px, 36px"
+                priority
+              />
+            </span>
             <span
               className="font-bold text-foreground truncate flex-1 text-base sm:text-lg md:text-2xl leading-tight"
-              title="ElectroQuiz"
+              title="QuimeQuiz"
             >
-              ElectroQuiz
+              QuimeQuiz
             </span>
           </div>
 
-          <nav className="flex items-center gap-0 sm:gap-2 ml-0 sm:ml-0 min-w-0">
+          <nav className="flex items-center gap-1 sm:gap-2 min-w-0">
             {usuario && loadingRole && (
               <span className="text-sm text-muted-foreground">Cargando...</span>
             )}
@@ -80,10 +93,10 @@ export function Navigation({ pin }: { pin?: string }) {
                 <Button
                   variant={pathname.startsWith("/teacher") ? "default" : "ghost"}
                   size="sm"
-                  className="shrink-0"
+                  className="shrink-0 min-h-11 px-2 sm:px-3"
                 >
-                  <Users className="mr-2 h-4 w-4" />
-                  Docente
+                  <Users className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Docente</span>
                 </Button>
               </Link>
             )}
@@ -93,25 +106,37 @@ export function Navigation({ pin }: { pin?: string }) {
                 <Button
                   variant={pathname.startsWith("/student") ? "default" : "ghost"}
                   size="sm"
-                  className="shrink-0"
+                  className="shrink-0 min-h-11 px-2 sm:px-3"
                 >
-                  <BookOpen className="mr-2 h-4 w-4" />
-                  Estudiante
+                  <BookOpen className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Estudiante</span>
                 </Button>
               </Link>
             )}
 
-            {role === "administrador" && (
-              <Link href="/administrador">
-                <Button
-                  variant={pathname.startsWith("/administrador") ? "default" : "ghost"}
-                  size="sm"
-                  className="shrink-0"
-                >
-                  <BookOpen className="mr-2 h-4 w-4" />
-                  Administrador
-                </Button>
-              </Link>
+            {role === RolUsuario.ADMINISTRADOR && (
+              <>
+                <Link href="/teacher">
+                  <Button
+                    variant={pathname.startsWith("/teacher") ? "default" : "ghost"}
+                    size="sm"
+                    className="shrink-0 min-h-11 px-2 sm:px-3"
+                  >
+                    <Users className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Docente</span>
+                  </Button>
+                </Link>
+                <Link href="/administrador">
+                  <Button
+                    variant={pathname.startsWith("/administrador") ? "default" : "ghost"}
+                    size="sm"
+                    className="shrink-0 min-h-11 px-2 sm:px-3"
+                  >
+                    <BookOpen className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Administrador</span>
+                  </Button>
+                </Link>
+              </>
             )}
 
             {usuario && (
@@ -119,7 +144,7 @@ export function Navigation({ pin }: { pin?: string }) {
                 <button
                   type="button"
                   onClick={() => setUserPanelOpen((v) => !v)}
-                  className="hidden md:flex items-center gap-2 pl-4 border-l focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm shrink-0"
+                  className="hidden md:flex items-center gap-2 pl-4 border-l focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm shrink-0 min-h-11"
                   aria-haspopup="dialog"
                   aria-expanded={userPanelOpen}
                   aria-label="Abrir panel de usuario"
@@ -130,7 +155,7 @@ export function Navigation({ pin }: { pin?: string }) {
                   >
                     <User className="h-5 w-5 text-primary" />
                   </span>
-                  <span className="text-sm font-medium text-foreground">
+                  <span className="text-sm font-medium text-foreground max-w-[10rem] truncate">
                     {usuario.nombre || usuario.correo}
                   </span>
                 </button>
@@ -138,7 +163,7 @@ export function Navigation({ pin }: { pin?: string }) {
                 <button
                   type="button"
                   onClick={() => setUserPanelOpen((v) => !v)}
-                  className="md:hidden pl-3 ml-3 border-l focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm shrink-0"
+                  className="md:hidden pl-3 ml-2 border-l focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm shrink-0 min-h-11 min-w-11"
                   aria-haspopup="dialog"
                   aria-expanded={userPanelOpen}
                   aria-label="Abrir panel de usuario"

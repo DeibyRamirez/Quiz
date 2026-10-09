@@ -20,8 +20,11 @@ const PreguntaSchema = new Schema(
     criteriosEvaluacion: { type: String },
     requiereCorreccionManual: { type: Boolean, default: false },
     tema: { type: String },
+    imagenReferencia: { type: String, trim: true },
     quizId: { type: String, required: true, index: true },
     activa: { type: Boolean, default: true },
+    revisadaPorDocente: { type: Boolean, default: false },
+    revisadaPorDocenteEn: { type: Date },
     creadoEn: { type: Date, default: Date.now },
   },
   {
@@ -31,6 +34,10 @@ const PreguntaSchema = new Schema(
 
 PreguntaSchema.index({ quizId: 1, activa: 1 });
 PreguntaSchema.index({ tema: 1 });
+
+if (process.env.NODE_ENV !== "production" && models.Pregunta) {
+  delete models.Pregunta;
+}
 
 export const PreguntaModel =
   models.Pregunta || model("Pregunta", PreguntaSchema);

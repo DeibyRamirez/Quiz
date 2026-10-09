@@ -86,7 +86,7 @@ export default function LoginPage() {
         <img src="/logo_universidad.png" alt="Logo" className="w-32 mx-auto mb-6" />
         <h1 className="heading-secondary text-center mb-2">Iniciar sesión</h1>
         <p className="body-small text-muted-foreground mb-6 text-center">
-          Accede con tu cuenta de ElectroQuiz
+          Accede con tu cuenta de QuimeQuiz
         </p>
 
         <form onSubmit={handleLogin} className="space-y-4">
@@ -116,7 +116,7 @@ export default function LoginPage() {
             />
           </div>
 
-          <Button type="submit" className="w-full btn-primary" disabled={loading || loadingGoogle}>
+          <Button type="submit" className="w-full btn-primary min-h-11" disabled={loading || loadingGoogle}>
             {loading ? "Entrando..." : "Iniciar sesión"}
           </Button>
         </form>
@@ -133,7 +133,7 @@ export default function LoginPage() {
         <Button
           type="button"
           variant="outline"
-          className="w-full"
+          className="w-full min-h-11"
           disabled={loading || loadingGoogle}
           onClick={handleGoogleLogin}
         >

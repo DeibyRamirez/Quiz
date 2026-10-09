@@ -1,6 +1,6 @@
 # Cómo implementar Socket.io en otro proyecto
 
-Guía portable para integrar **Socket.io** en aplicaciones web con Node.js — basada en la arquitectura probada en **Electro Quiz**, pero aplicable a chats, dashboards en vivo, juegos multijugador, notificaciones, colaboración en tiempo real, etc.
+Guía portable para integrar **Socket.io** en aplicaciones web con Node.js — basada en la arquitectura probada en **QuimeQuiz**, pero aplicable a chats, dashboards en vivo, juegos multijugador, notificaciones, colaboración en tiempo real, etc.
 
 > Implementación concreta en este repo: [websockets.md](./websockets.md) · [reconexion-y-sincronizacion.md](./reconexion-y-sincronizacion.md)
 
@@ -67,7 +67,7 @@ El error más común es tratar el socket como base de datos. **No lo hagas.**
 
 ## Estructura de carpetas (plantilla)
 
-Adaptada de Electro Quiz; ajusta nombres a tu stack:
+Adaptada de QuimeQuiz; ajusta nombres a tu stack:
 
 ```
 proyecto/
@@ -193,7 +193,7 @@ Opciones de token:
 | Bearer en `auth` del handshake | Funciona cross-origin | Expone token en JS si no es httpOnly |
 | Sesión Express | Clásico en SSR | Acopla a Express |
 
-En Electro Quiz: cookie `eq_token` + `withCredentials: true`.
+En QuimeQuiz: cookie `eq_token` + `withCredentials: true`.
 
 ---
 
@@ -324,7 +324,7 @@ export function useRecursoLive(id: string | null) {
 | Estado local extra | REST dedicado (`/progreso`, `/mensajes?since=`) para datos que el snapshot no incluye |
 | UX | Banner "Reconectado", botón "Volver a la sesión", PIN en localStorage |
 
-En Electro Quiz:
+En QuimeQuiz:
 
 - Docente: `POST /sesiones` idempotente (devuelve sesión activa).
 - Estudiante: `POST /unirse` permite reconexión si ya participó.

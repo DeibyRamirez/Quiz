@@ -15,14 +15,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ArrowLeft, Save, Plus, Trash2, Edit, X } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, Edit, X, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { EstadoQuiz } from "@/app/types";
+import { EstadoQuiz, etiquetaEstadoQuiz } from "@/app/types";
 import { obtenerUsuarioActual } from "@/lib/client/auth";
-import { obtenerQuiz, actualizarQuiz } from "@/lib/client/services/quizzes";
+import {
+  obtenerQuiz,
+  actualizarQuiz,
+  verificarQuizDocente,
+  extraerErroresVerificacionQuiz,
+  type ErrorVerificacionQuiz,
+} from "@/lib/client/services/quizzes";
+import { ApiError } from "@/lib/client/api";
+import { OrigenGeneracion } from "@/app/types/quiz-ia";
 import {
   listarPreguntas,
   crearPregunta,
@@ -33,10 +41,10 @@ import {
   type AnswerUi,
   type QuestionTypeUi,
   type QuestionUi,
-  QUESTION_TYPE_LABELS,
   preguntaApiToUi,
   preguntaUiToCrear,
   preguntaUiToActualizar,
+  etiquetaTipoPreguntaPlay,
 } from "@/lib/client/mappers/pregunta-ui";
 import {
   type QuizFormState,
@@ -47,7 +55,10 @@ import {
   FieldGroup,
   answersEqual,
   buildCanSaveQuestion,
+  textareaFormularioSolido,
+  inputFormularioSolido,
 } from "@/app/teacher/_components/quiz-form-shared";
+import { ImagenPreguntaField } from "@/app/teacher/_components/imagen-pregunta-field";
 
 export default function EditQuizPage() {
   const params = useParams();
@@ -92,6 +103,12 @@ export default function EditQuizPage() {
 
   const [exactAnswerText, setExactAnswerText] = useState("");
   const [originalExactAnswerText, setOriginalExactAnswerText] = useState("");
+  const [questionImagenRef, setQuestionImagenRef] = useState<string | undefined>();
+  const [esQuizIa, setEsQuizIa] = useState(false);
+  const [verificandoQuiz, setVerificandoQuiz] = useState(false);
+  const [erroresVerificacion, setErroresVerificacion] = useState<
+    ErrorVerificacionQuiz[]
+  >([]);
 
   const recargarPreguntas = async () => {
     const data = await listarPreguntas(quizId, { incluirInactivas: true });
@@ -114,6 +131,9 @@ export default function EditQuizPage() {
         };
         setQuizData(initialQuiz);
         setOriginalQuizData(initialQuiz);
+        setEsQuizIa(
+          quiz.origenGeneracion === OrigenGeneracion.IA || Boolean(quiz.guiaId)
+        );
         await recargarPreguntas();
       } catch {
         router.push("/teacher");
@@ -159,7 +179,7 @@ export default function EditQuizPage() {
         numericalUnit !== originalNumericalUnit
       );
     }
-    if (questionType === "exact-text") {
+    if (questionType === "exact-text" || questionType === "open-text") {
       return exactAnswerText !== originalExactAnswerText;
     }
     return !answersEqual(answers, originalAnswers);
@@ -184,6 +204,53 @@ export default function EditQuizPage() {
       exactAnswerText,
     ]
   );
+
+  const opcionesPreviewImagen = useMemo(() => {
+    if (questionType === "true-false") return ["Verdadero", "Falso"];
+    if (questionType === "multiple-choice") {
+      const texts = answers.map((a) => a.text.trim()).filter(Boolean);
+      return texts.length > 0 ? texts : undefined;
+    }
+    return undefined;
+  }, [questionType, answers]);
+
+  const etiquetaTipoImagen = useMemo(
+    () =>
+      etiquetaTipoPreguntaPlay({
+        questionType,
+        permiteMultiples: questionForm.permiteMultiples,
+      }),
+    [questionType, questionForm.permiteMultiples]
+  );
+
+  const preguntasActivas = useMemo(
+    () => questions.filter((q) => q.activa),
+    [questions]
+  );
+
+  const preguntasRevisadasCount = useMemo(
+    () => preguntasActivas.filter((q) => q.revisadaPorDocente).length,
+    [preguntasActivas]
+  );
+
+  const todasRevisadasIa =
+    esQuizIa &&
+    preguntasActivas.length > 0 &&
+    preguntasActivas.every((q) => q.revisadaPorDocente);
+
+  const puntosSelectOptions = useMemo(() => {
+    const base = [...POINTS_OPTIONS];
+    const actual = questionForm.points.trim();
+    if (actual && !base.includes(actual)) {
+      base.push(actual);
+    }
+    return base.sort((a, b) => Number(a) - Number(b));
+  }, [questionForm.points]);
+
+  const puedeGuardarPreguntaActual =
+    canSaveQuestion &&
+    (hasQuestionChanges() ||
+      (esQuizIa && Boolean(selectedQuestionId)));
 
   async function handleSaveQuiz() {
     if (!(await obtenerUsuarioActual())) {
@@ -227,7 +294,7 @@ export default function EditQuizPage() {
     } else if (type === "numerical") {
       setNumericalInput("");
       setNumericalUnit("");
-    } else if (type === "exact-text") {
+    } else if (type === "exact-text" || type === "open-text") {
       setExactAnswerText("");
     }
   };
@@ -257,52 +324,63 @@ export default function EditQuizPage() {
       tema: questionForm.tema.trim() || undefined,
       permiteMultiples: questionForm.permiteMultiples,
       exactAnswerText:
-        questionType === "exact-text" ? exactAnswerText.trim() : undefined,
+        questionType === "exact-text" || questionType === "open-text"
+          ? exactAnswerText.trim()
+          : undefined,
     };
   }
 
-  async function handleSaveQuestion() {
+  async function persistCurrentQuestion(options?: {
+    resetAfterSave?: boolean;
+    showSuccessToast?: boolean;
+  }): Promise<boolean> {
+    const { resetAfterSave = false, showSuccessToast = true } = options ?? {};
+
     if (!(await obtenerUsuarioActual())) {
       toast.error("Debes iniciar sesión.");
-      return;
+      return false;
     }
 
     if (!questionForm.question.trim()) {
       toast.warning("La pregunta es obligatoria.");
-      return;
+      return false;
     }
 
     if (questionType === "multiple-choice") {
       if (answers.some((a) => !a.text.trim())) {
         toast.warning("Todas las opciones deben tener texto.");
-        return;
+        return false;
       }
       const correctCount = answers.filter((a) => a.isCorrect).length;
       if (correctCount === 0) {
         toast.warning("Marca al menos una opción correcta.");
-        return;
+        return false;
       }
       if (!questionForm.permiteMultiples && correctCount > 1) {
         toast.warning("Solo una opción puede ser correcta.");
-        return;
+        return false;
       }
     }
 
     if (questionType === "numerical") {
-      const trimmed = numericalInput.trim();
-      if (!trimmed || Number.isNaN(parseFloat(trimmed))) {
-        toast.warning("Ingresa un valor numérico válido.");
-        return;
-      }
-      if (!numericalUnit) {
-        toast.warning("Selecciona una unidad.");
-        return;
+      if (!numericalInput.trim()) {
+        toast.warning("La respuesta correcta es obligatoria.");
+        return false;
       }
     }
 
-    if (questionType === "exact-text" && !exactAnswerText.trim()) {
+    if (
+      (questionType === "exact-text" || questionType === "open-text") &&
+      !exactAnswerText.trim()
+    ) {
       toast.warning("La respuesta correcta es obligatoria.");
-      return;
+      return false;
+    }
+
+    const puntos = Number(questionForm.points);
+    if (!Number.isFinite(puntos) || puntos <= 0) {
+      toast.warning("Los puntos son obligatorios (elige un valor mayor a 0).");
+      return false;
     }
 
     setIsSavingQuestion(true);
@@ -315,26 +393,116 @@ export default function EditQuizPage() {
           : undefined;
 
       if (selectedQuestionId) {
-        await actualizarPregunta(
-          selectedQuestionId,
-          preguntaUiToActualizar(questionUi, answers, numerical)
-        );
-        toast.success("Pregunta actualizada.");
+        const preguntaIdGuardada = selectedQuestionId;
+        const payload = preguntaUiToActualizar(questionUi, answers, numerical);
+        await actualizarPregunta(preguntaIdGuardada, {
+          ...payload,
+          ...(esQuizIa ? { confirmarRevisionDocente: true } : {}),
+        });
+        if (showSuccessToast) {
+          toast.success(
+            esQuizIa
+              ? "Pregunta actualizada y marcada como revisada."
+              : "Pregunta actualizada."
+          );
+        }
+        await recargarPreguntas();
+        if (esQuizIa) {
+          setQuestions((prev) =>
+            prev.map((q) =>
+              q.id === preguntaIdGuardada
+                ? { ...q, revisadaPorDocente: true }
+                : q
+            )
+          );
+        }
+        if (resetAfterSave) {
+          resetQuestionForm();
+        } else {
+          snapshotQuestionState();
+        }
       } else {
-        await crearPregunta(
+        const creada = await crearPregunta(
           preguntaUiToCrear(questionUi, quizId, answers, numerical)
         );
-        toast.success("Pregunta agregada.");
+        setSelectedQuestionId(creada.id);
+        setQuestionImagenRef(
+          (creada as { imagenReferencia?: string }).imagenReferencia
+        );
+        if (showSuccessToast) {
+          toast.success("Pregunta agregada. Ya puedes subir una imagen opcional.");
+        }
+        await recargarPreguntas();
+        if (resetAfterSave) {
+          resetQuestionForm();
+        } else {
+          snapshotQuestionState();
+        }
       }
-
-      await recargarPreguntas();
-      resetQuestionForm();
+      return true;
     } catch (err) {
       console.error("Error al guardar la pregunta:", err);
       toast.error("Error al guardar la pregunta.");
+      return false;
     } finally {
       setIsSavingQuestion(false);
     }
+  }
+
+  async function handleSaveQuestion() {
+    await persistCurrentQuestion({ resetAfterSave: true, showSuccessToast: true });
+  }
+
+  async function handleVerificarQuiz() {
+    if (!(await obtenerUsuarioActual())) {
+      toast.error("Debes iniciar sesión.");
+      return;
+    }
+
+    setErroresVerificacion([]);
+
+    if (hasQuestionChanges()) {
+      if (!canSaveQuestion) {
+        toast.warning(
+          "Guarda o corrige la pregunta abierta antes de verificar el quiz."
+        );
+        return;
+      }
+      const guardado = await persistCurrentQuestion({
+        resetAfterSave: false,
+        showSuccessToast: false,
+      });
+      if (!guardado) return;
+      toast.success("Pregunta guardada.");
+    }
+
+    setVerificandoQuiz(true);
+    try {
+      const resultado = await verificarQuizDocente(quizId);
+      const listo = EstadoQuiz.PUBLICADO;
+      setQuizData((prev) => ({ ...prev, estado: listo }));
+      setOriginalQuizData((prev) => ({ ...prev, estado: listo }));
+      toast.success(
+        `Quiz verificado (${resultado.preguntasValidadas} preguntas). Estado: Listo.`
+      );
+    } catch (error) {
+      const errores = extraerErroresVerificacionQuiz(error);
+      if (errores?.length) {
+        setErroresVerificacion(errores);
+        toast.error("Hay preguntas con respuestas inválidas. Revisa la lista.");
+      } else {
+        const mensaje =
+          error instanceof ApiError ? error.message : "No se pudo verificar el quiz.";
+        toast.error(mensaje);
+      }
+    } finally {
+      setVerificandoQuiz(false);
+    }
+  }
+
+  function irAPreguntaVerificacion(preguntaId: string) {
+    const q = questions.find((item) => item.id === preguntaId);
+    if (q) editQuestion(q);
   }
 
   async function handleDeleteQuestion(id: string) {
@@ -360,6 +528,7 @@ export default function EditQuizPage() {
 
   function editQuestion(q: QuestionUi) {
     setSelectedQuestionId(q.id);
+    setQuestionImagenRef(q.imagenReferencia);
     setQuestionType(q.questionType);
     const numero = questions.findIndex((item) => item.id === q.id) + 1;
     toast.info(numero > 0 ? `Editando pregunta ${numero}` : "Editando pregunta");
@@ -376,14 +545,20 @@ export default function EditQuizPage() {
     setQuestionForm(form);
 
     if (q.questionType === "numerical") {
-      setNumericalInput(q.correctValue?.toString() ?? "");
-      setNumericalUnit(q.unit ?? "");
+      setQuestionType("exact-text");
+      setExactAnswerText(
+        q.correctValue !== undefined ? String(q.correctValue) : ""
+      );
+      setNumericalInput("");
+      setNumericalUnit("");
       setAnswers([
         { id: "1", text: "", isCorrect: false },
         { id: "2", text: "", isCorrect: false },
       ]);
-      setExactAnswerText("");
-    } else if (q.questionType === "exact-text") {
+    } else if (
+      q.questionType === "exact-text" ||
+      q.questionType === "open-text"
+    ) {
       setExactAnswerText(q.exactAnswerText ?? "");
       setNumericalInput("");
       setNumericalUnit("");
@@ -432,6 +607,7 @@ export default function EditQuizPage() {
     setOriginalNumericalInput("");
     setOriginalNumericalUnit("");
     setOriginalExactAnswerText("");
+    setQuestionImagenRef(undefined);
   }
 
   const toggleCorrectAnswer = (id: string) => {
@@ -466,7 +642,7 @@ export default function EditQuizPage() {
 
   if (loading) {
     return (
-      <div className="page-shell flex items-center justify-center min-h-screen">
+      <div className="page-shell flex items-center justify-center min-h-screen min-h-[100dvh]">
         <div className="text-center">
           <div className="loading-spinner" />
           <p className="body-text text-muted-foreground mt-4">Cargando quiz...</p>
@@ -479,9 +655,9 @@ export default function EditQuizPage() {
     <div className="page-shell">
       <Navigation />
       <main className="page-main space-y-8">
-        <div className="flex items-center gap-4 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 min-w-0">
           <Link href="/teacher">
-            <Button variant="outline" size="sm" className="border-primary text-primary">
+            <Button variant="outline" size="sm" className="border-primary text-primary min-h-11">
               <ArrowLeft className="mr-2 h-4 w-4" /> Volver
             </Button>
           </Link>
@@ -502,7 +678,7 @@ export default function EditQuizPage() {
                   onChange={(e) =>
                     setQuizData({ ...quizData, title: e.target.value })
                   }
-                  className="input-institutional"
+                  className={`input-institutional ${inputFormularioSolido}`}
                 />
               </FieldGroup>
 
@@ -518,7 +694,9 @@ export default function EditQuizPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={EstadoQuiz.BORRADOR}>Borrador</SelectItem>
-                    <SelectItem value={EstadoQuiz.PUBLICADO}>Publicado</SelectItem>
+                    <SelectItem value={EstadoQuiz.PUBLICADO}>
+                      {etiquetaEstadoQuiz(EstadoQuiz.PUBLICADO)}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </FieldGroup>
@@ -537,6 +715,7 @@ export default function EditQuizPage() {
                   setQuizData({ ...quizData, description: e.target.value })
                 }
                 rows={3}
+                className={textareaFormularioSolido}
               />
             </FieldGroup>
 
@@ -548,6 +727,81 @@ export default function EditQuizPage() {
               <Save className="mr-2 h-4 w-4" />
               {isSavingQuiz ? "Actualizando..." : "Actualizar Quiz"}
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="card-institutional border-primary/15">
+          <CardHeader>
+            <CardTitle className="heading-secondary text-base">
+              Publicación segura
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {esQuizIa
+                ? "Abre cada pregunta activa y pulsa Actualizar pregunta. Cuando todas estén revisadas, podrás marcar el quiz como Listo."
+                : "Valida que todas las preguntas activas tengan respuestas correctas guardadas en la base de datos y marca el quiz como Listo."}
+            </p>
+            {esQuizIa && quizData.estado !== EstadoQuiz.PUBLICADO ? (
+              <p className="text-sm font-medium">
+                Progreso de revisión: {preguntasRevisadasCount} /{" "}
+                {preguntasActivas.length} preguntas
+              </p>
+            ) : null}
+            {quizData.estado === EstadoQuiz.PUBLICADO ? (
+              <p className="text-sm text-primary font-medium">
+                Este quiz ya está en Listo. Puedes iniciar la sesión desde el panel.
+              </p>
+            ) : (
+              <Button
+                type="button"
+                className="btn-primary min-h-11"
+                onClick={handleVerificarQuiz}
+                disabled={
+                  verificandoQuiz ||
+                  isSavingQuestion ||
+                  preguntasActivas.length === 0 ||
+                  (esQuizIa && !todasRevisadasIa)
+                }
+                title={
+                  esQuizIa && !todasRevisadasIa
+                    ? "Debes actualizar cada pregunta activa antes de verificar"
+                    : undefined
+                }
+              >
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                {verificandoQuiz ? "Verificando..." : "Quiz verificado por mí"}
+              </Button>
+            )}
+            {erroresVerificacion.length > 0 ? (
+              <div
+                className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 space-y-2"
+                role="alert"
+              >
+                <p className="text-sm font-medium text-destructive">
+                  Corrige estas preguntas y vuelve a verificar:
+                </p>
+                <ul className="space-y-2 text-sm">
+                  {erroresVerificacion.map((err) => (
+                    <li key={err.preguntaId} className="flex flex-col gap-1">
+                      <span>
+                        #{err.indice}: {err.mensaje}
+                        {err.textoCorto ? ` — «${err.textoCorto}»` : ""}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="self-start"
+                        onClick={() => irAPreguntaVerificacion(err.preguntaId)}
+                      >
+                        Editar pregunta #{err.indice}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -568,7 +822,7 @@ export default function EditQuizPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="outline">#{index + 1}</Badge>
                       <Badge className="badge-primary">
-                        {QUESTION_TYPE_LABELS[q.questionType]}
+                        {etiquetaTipoPreguntaPlay(q)}
                       </Badge>
                       <Badge variant="secondary">{q.points} pts</Badge>
                       <Badge variant="outline">{q.timeLimit}s</Badge>
@@ -576,10 +830,26 @@ export default function EditQuizPage() {
                       {!q.activa ? (
                         <Badge variant="destructive">Inactiva</Badge>
                       ) : null}
+                      {esQuizIa && q.activa ? (
+                        <Badge
+                          variant={
+                            q.revisadaPorDocente ? "secondary" : "outline"
+                          }
+                        >
+                          {q.revisadaPorDocente ? "Revisada" : "Pendiente"}
+                        </Badge>
+                      ) : null}
                     </div>
                     <p className="text-sm sm:text-base whitespace-pre-wrap wrap-break-word">
                       {q.question}
                     </p>
+                    {q.imageUrl ? (
+                      <img
+                        src={q.imageUrl}
+                        alt=""
+                        className="mt-2 max-h-20 rounded border border-border object-contain bg-white"
+                      />
+                    ) : null}
                   </div>
 
                   <div className="flex flex-wrap gap-2 shrink-0">
@@ -626,11 +896,8 @@ export default function EditQuizPage() {
                   <SelectContent>
                     <SelectItem value="multiple-choice">Opción múltiple</SelectItem>
                     <SelectItem value="true-false">Verdadero / Falso</SelectItem>
-                    <SelectItem value="numerical">
-                      Numérica (con unidad)
-                    </SelectItem>
                     <SelectItem value="exact-text">
-                      Respuesta exacta (palabra o número)
+                      Respuesta corta (palabra o número)
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -646,7 +913,7 @@ export default function EditQuizPage() {
                   value={questionForm.tema}
                   onChange={(e) => updateQuestionForm({ tema: e.target.value })}
                   placeholder="Clasificación del contenido"
-                  className="input-institutional"
+                  className={`input-institutional ${inputFormularioSolido}`}
                 />
               </FieldGroup>
             </div>
@@ -660,8 +927,21 @@ export default function EditQuizPage() {
                   updateQuestionForm({ question: e.target.value })
                 }
                 rows={4}
+                className={textareaFormularioSolido}
               />
             </FieldGroup>
+
+            <ImagenPreguntaField
+              preguntaId={selectedQuestionId}
+              imagenReferencia={questionImagenRef}
+              textoPregunta={questionForm.question}
+              opcionesPreview={opcionesPreviewImagen}
+              etiquetaTipo={etiquetaTipoImagen}
+              onChange={(ref) => {
+                setQuestionImagenRef(ref);
+                recargarPreguntas().catch(() => {});
+              }}
+            />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <FieldGroup label="Tiempo límite" htmlFor="question-time">
@@ -680,16 +960,20 @@ export default function EditQuizPage() {
                 </Select>
               </FieldGroup>
 
-              <FieldGroup label="Puntos" htmlFor="question-points">
+              <FieldGroup
+                label="Puntos"
+                htmlFor="question-points"
+                hint="Obligatorio. Revisa el valor en cada pregunta generada por IA."
+              >
                 <Select
                   value={questionForm.points}
                   onValueChange={(v) => updateQuestionForm({ points: v })}
                 >
                   <SelectTrigger id="question-points" className="input-institutional">
-                    <SelectValue />
+                    <SelectValue placeholder="Elige puntos" />
                   </SelectTrigger>
                   <SelectContent>
-                    {POINTS_OPTIONS.map((p) => (
+                    {puntosSelectOptions.map((p) => (
                       <SelectItem key={p} value={p}>{p} pts</SelectItem>
                     ))}
                   </SelectContent>
@@ -746,53 +1030,23 @@ export default function EditQuizPage() {
                   updateQuestionForm({ explanation: e.target.value })
                 }
                 rows={3}
+                className={textareaFormularioSolido}
               />
             </FieldGroup>
-
-            {questionType === "numerical" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-border rounded-lg bg-muted/30">
-                <FieldGroup label="Valor correcto" htmlFor="numerical-value">
-                  <Input
-                    id="numerical-value"
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="Ej: -144.25, 0.001"
-                    className="input-institutional font-mono hide-number-arrows"
-                    value={numericalInput}
-                    onChange={(e) => handleNumericalInput(e.target.value)}
-                  />
-                </FieldGroup>
-                <FieldGroup label="Unidad" htmlFor="numerical-unit">
-                  <Select value={numericalUnit} onValueChange={setNumericalUnit}>
-                    <SelectTrigger id="numerical-unit" className="input-institutional">
-                      <SelectValue placeholder="Seleccionar unidad" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="N">Newton (N)</SelectItem>
-                      <SelectItem value="C">Coulomb (C)</SelectItem>
-                      <SelectItem value="V">Voltio (V)</SelectItem>
-                      <SelectItem value="m">Metro (m)</SelectItem>
-                      <SelectItem value="J">Joule (J)</SelectItem>
-                      <SelectItem value="Otro">Otro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FieldGroup>
-              </div>
-            )}
 
             {questionType === "exact-text" && (
               <div className="p-4 border border-border rounded-lg bg-muted/30">
                 <FieldGroup
                   label="Respuesta correcta"
                   htmlFor="exact-answer"
-                  hint="Una sola respuesta válida. Ej: Rojo, 8, Programación Orientada a Objetos."
+                  hint="Una palabra, número o código. No importan mayúsculas (ej. 5, Software , Derecho)."
                 >
                   <Input
                     id="exact-answer"
                     value={exactAnswerText}
                     onChange={(e) => setExactAnswerText(e.target.value)}
-                    placeholder="Ej: Rojo"
-                    className="input-institutional"
+                    placeholder="Ej: 5, Software, Derecho"
+                    className={`input-institutional ${inputFormularioSolido}`}
                   />
                 </FieldGroup>
               </div>
@@ -824,7 +1078,7 @@ export default function EditQuizPage() {
                           value={a.text}
                           onChange={(e) => updateAnswer(a.id, e.target.value)}
                           placeholder={`Opción ${i + 1}`}
-                          className="flex-1 input-institutional"
+                          className={`flex-1 input-institutional ${inputFormularioSolido}`}
                         />
                         {answers.length > 2 && (
                           <Button
@@ -856,7 +1110,7 @@ export default function EditQuizPage() {
                           value={a.text}
                           onChange={(e) => updateAnswer(a.id, e.target.value)}
                           placeholder={`Opción ${i + 1}`}
-                          className="flex-1 input-institutional"
+                          className={`flex-1 input-institutional ${inputFormularioSolido}`}
                         />
                         {answers.length > 2 && (
                           <Button
@@ -904,11 +1158,7 @@ export default function EditQuizPage() {
               <Button
                 className="btn-primary"
                 onClick={handleSaveQuestion}
-                disabled={
-                  isSavingQuestion ||
-                  !hasQuestionChanges() ||
-                  !canSaveQuestion
-                }
+                disabled={isSavingQuestion || !puedeGuardarPreguntaActual}
               >
                 <Save className="mr-2 h-4 w-4" />
                 {isSavingQuestion

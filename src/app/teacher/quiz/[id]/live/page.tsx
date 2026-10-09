@@ -3,17 +3,18 @@
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, Copy, Check } from "lucide-react";
-import { ArrowLeft, Users, Clock, Play, SkipForward } from "lucide-react";
+import { AlertCircle, Copy, Check, Hash } from "lucide-react";
+import { ArrowLeft, Users, Play, SkipForward } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { obtenerQuiz } from "@/lib/client/services/quizzes";
-import { preguntaApiToUi } from "@/lib/client/mappers/pregunta-ui";
+import {
+  preguntaApiToUi,
+  etiquetaTipoPreguntaPlay,
+} from "@/lib/client/mappers/pregunta-ui";
 import {
   crearSesion,
   actualizarNombreSesion,
@@ -23,6 +24,8 @@ import {
 import { useSesionLive } from "@/hooks/useSesionLive";
 import { useSesionTimer } from "@/hooks/useSesionTimer";
 import { timerSesionExpirado } from "@/lib/client/sesion-timer";
+import { BarraTiempoSesion } from "@/components/barra-tiempo-sesion";
+import { TableroOpciones } from "@/components/tablero-opciones";
 import type { QuestionUi } from "@/lib/client/mappers/pregunta-ui";
 
 export default function LiveQuizPage() {
@@ -206,7 +209,7 @@ export default function LiveQuizPage() {
 
   if (isLoading || !quiz || !session) {
     return (
-      <div className="page-shell flex items-center justify-center min-h-screen">
+      <div className="page-shell flex items-center justify-center min-h-screen min-h-[100dvh]">
         <div className="text-center">
           <div className="loading-spinner"></div>
           <p className="body-text text-muted-foreground">Cargando...</p>
@@ -215,8 +218,14 @@ export default function LiveQuizPage() {
     );
   }
 
+  const preguntaActual = questions[currentQuestion];
+  const esEscrita =
+    preguntaActual?.questionType === "numerical" ||
+    preguntaActual?.questionType === "exact-text" ||
+    preguntaActual?.questionType === "open-text";
+
   return (
-    <div className="page-shell">
+    <div className="page-shell min-h-[100dvh]">
       <Navigation />
 
       <main className="page-main">
@@ -233,15 +242,15 @@ export default function LiveQuizPage() {
           </div>
         )}
 
-        <div className="flex flex-wrap md:flex-nowrap items-center gap-3 md:gap-4 mb-8">
+        <div className="flex flex-wrap md:flex-nowrap items-center gap-3 md:gap-4 mb-6 sm:mb-8">
           <Link href="/teacher" className="shrink-0">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="min-h-11">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Volver
             </Button>
           </Link>
 
-          <div className="w-full md:w-auto md:flex-1 order-3 md:order-none text-center md:text-left">
+          <div className="w-full md:w-auto md:flex-1 order-3 md:order-none text-center md:text-left min-w-0">
             <h1 className="heading-secondary leading-snug break-words">
               {quiz.title}
             </h1>
@@ -252,7 +261,7 @@ export default function LiveQuizPage() {
             <Button
               onClick={handleNextQuestion}
               disabled={status === "lobby"}
-              className="btn-primary shrink-0 flex items-end gap-2"
+              className="btn-primary shrink-0 flex items-center gap-2 min-h-11"
             >
               <SkipForward className="mr-2 h-4 w-4" />
               Siguiente
@@ -275,7 +284,7 @@ export default function LiveQuizPage() {
                   value={sessionName}
                   onChange={handleSessionNameChange}
                   placeholder="Ej: Clase 1A - 27 Oct"
-                  className={`input-institutional max-w-md ${isSessionNameTouched && !isSessionNameValid ? "border-destructive" : ""}`}
+                  className={`input-institutional max-w-md min-h-11 text-base ${isSessionNameTouched && !isSessionNameValid ? "border-destructive" : ""}`}
                 />
                 {isSessionNameTouched && !isSessionNameValid && (
                   <p className="text-error flex items-center gap-1">
@@ -288,9 +297,12 @@ export default function LiveQuizPage() {
 
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-3">
+                  <Hash className="h-7 w-7 text-primary icono-pin-lobby" aria-hidden="true" />
                   <span className="text-lg">PIN:</span>
-                  <span className="font-bold text-3xl text-primary">{pin}</span>
-                  <Button size="sm" variant="outline" onClick={copyPin}>
+                  <span className="font-bold text-3xl sm:text-4xl text-primary tracking-widest tabular-nums">
+                    {pin}
+                  </span>
+                  <Button size="sm" variant="outline" onClick={copyPin} className="min-h-11">
                     {copied ? <Check className="h-4 w-4 text-green-600 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
                     {copied ? "PIN copiado" : "Copiar PIN"}
                   </Button>
@@ -304,9 +316,9 @@ export default function LiveQuizPage() {
                         id="url-union"
                         readOnly
                         value={urlUnion}
-                        className="input-institutional font-mono text-sm"
+                        className="input-institutional font-mono text-sm min-h-11"
                       />
-                      <Button size="sm" variant="outline" onClick={copyUrlUnion} className="shrink-0">
+                      <Button size="sm" variant="outline" onClick={copyUrlUnion} className="shrink-0 min-h-11">
                         {copiedUrl ? (
                           <Check className="h-4 w-4 text-green-600 mr-1" />
                         ) : (
@@ -324,11 +336,14 @@ export default function LiveQuizPage() {
               </div>
 
               <div>
-                <h3 className="font-semibold mb-2">Jugadores conectados ({players.length}):</h3>
+                <h3 className="font-semibold mb-2 flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary icono-usuarios-lobby" aria-hidden="true" />
+                  Jugadores conectados ({players.length}):
+                </h3>
                 {players.length > 0 ? (
                   <ul className="list-disc list-inside space-y-1">
                     {players.map((p) => (
-                      <li key={p.userId} className="text-sm">
+                      <li key={p.userId} className="text-sm break-words">
                         {p.nombre}
                       </li>
                     ))}
@@ -339,7 +354,7 @@ export default function LiveQuizPage() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <Button onClick={startQuiz} disabled={!canStartQuiz} size="lg" className="btn-primary w-full md:w-auto">
+                <Button onClick={startQuiz} disabled={!canStartQuiz} size="lg" className="btn-primary w-full md:w-auto min-h-11">
                   <Play className="mr-2 h-5 w-5" />
                   Empezar Quiz
                 </Button>
@@ -355,60 +370,63 @@ export default function LiveQuizPage() {
 
         {status !== "lobby" && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <Card className="card-institutional">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-primary">Pregunta</CardTitle>
-                  <Badge variant="outline">
-                    {currentQuestion + 1}/{questions.length}
-                  </Badge>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{currentQuestion + 1}</div>
-                  <Progress value={((currentQuestion + 1) / questions.length) * 100} className="mt-2" />
-                </CardContent>
-              </Card>
-
-              <Card className="card-institutional">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-primary">Participantes</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{players.length}</div>
-                </CardContent>
-              </Card>
-
-              <Card className="card-institutional">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-primary">Tiempo</CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className={`text-2xl font-bold tabular-nums ${timeLeft <= 10 ? "text-destructive" : ""}`}>
-                    {formatted}
-                  </div>
-                  <Progress value={progress} className="mt-2" />
-                </CardContent>
-              </Card>
+            <div className="live-stats-bar mb-4 sm:mb-6">
+              <div className="live-stat">
+                <span className="live-stat-label">Pregunta</span>
+                <span className="live-stat-value tabular-nums">
+                  {currentQuestion + 1}/{questions.length}
+                </span>
+              </div>
+              <div className="live-stat">
+                <span className="live-stat-label flex items-center gap-1">
+                  <Users className="h-4 w-4 icono-usuarios-lobby" aria-hidden="true" />
+                  Participantes
+                </span>
+                <span className="live-stat-value tabular-nums">{players.length}</span>
+              </div>
             </div>
 
-            {questions[currentQuestion] && (
-              <Card className="card-institutional">
-                <CardHeader>
-                  <CardTitle className="heading-secondary">Pregunta Actual</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <h3 className="text-xl font-semibold mb-4">{questions[currentQuestion].question}</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {questions[currentQuestion].options?.map((opt, i) => (
-                      <div key={opt.id || i} className="p-4 border rounded-lg bg-muted/50">
-                        {opt.text}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+            <BarraTiempoSesion
+              formatted={formatted}
+              timeLeft={timeLeft}
+              progress={progress}
+              etiqueta={
+                preguntaActual
+                  ? etiquetaTipoPreguntaPlay(preguntaActual)
+                  : "Tiempo"
+              }
+            />
+
+            {preguntaActual && (
+              <div className="quiz-play-tablero live-proyeccion mt-4 sm:mt-6">
+                <section className="quiz-play-pregunta">
+                  <p className="quiz-play-pregunta-kicker">Pregunta actual</p>
+                  <h2 className="question-text whitespace-pre-wrap break-words text-left lg:text-left">
+                    {preguntaActual.question}
+                  </h2>
+                  {preguntaActual.imageUrl ? (
+                    <img
+                      src={preguntaActual.imageUrl}
+                      alt="Referencia de la pregunta"
+                      className="mt-4 max-w-full max-h-48 sm:max-h-64 rounded-lg border border-border object-contain bg-white"
+                    />
+                  ) : null}
+                </section>
+                <section className="quiz-play-respuestas">
+                  {esEscrita ? (
+                    <div className="p-4 sm:p-6 rounded-xl border border-border bg-card">
+                      <p className="text-sm uppercase tracking-wide text-muted-foreground mb-1">
+                        Respuesta corta
+                      </p>
+                      <p className="body-text">
+                        Los estudiantes escriben su respuesta. Se califica al enviar.
+                      </p>
+                    </div>
+                  ) : (
+                    <TableroOpciones opciones={preguntaActual.options ?? []} />
+                  )}
+                </section>
+              </div>
             )}
           </>
         )}

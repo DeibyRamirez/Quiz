@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { TipoPregunta } from "@/app/types/pregunta";
+import { TipoPregunta, type CrearPregunta } from "@/app/types/pregunta";
 
 const preguntaBaseSchema = z.object({
   texto: z.string().trim().min(1, "El texto es obligatorio"),
@@ -7,6 +7,7 @@ const preguntaBaseSchema = z.object({
   tiempoLimite: z.number().int().positive().default(30),
   explicacion: z.string().trim().optional(),
   tema: z.string().trim().optional(),
+  imagenReferencia: z.string().trim().optional(),
   quizId: z.string().trim().min(1, "quizId es obligatorio"),
   activa: z.boolean().default(true),
 });
@@ -62,6 +63,12 @@ function validarRespuestaCorrecta(
       const indices = Array.isArray(data.respuestaCorrecta)
         ? data.respuestaCorrecta
         : [data.respuestaCorrecta];
+      if (indices.length === 0) {
+        return "Debe haber al menos una respuesta correcta";
+      }
+      if (!data.permiteMultiples && indices.length > 1) {
+        return "Solo una respuesta correcta permitida";
+      }
       const invalido = indices.some(
         (idx) => idx < 0 || idx >= data.opciones.length
       );
@@ -103,4 +110,104 @@ export function parsearCrearPregunta(body: unknown) {
   }
 
   return data;
+}
+
+export type ResultadoValidacionPregunta = {
+  valida: boolean;
+  mensaje?: string;
+};
+
+function normalizarTipoPersistido(tipo: unknown): string | null {
+  if (tipo === TipoPregunta.MULTIPLE_OPCION) return TipoPregunta.MULTIPLE_OPCION;
+  if (tipo === TipoPregunta.VERDADERO_FALSO) return TipoPregunta.VERDADERO_FALSO;
+  if (tipo === TipoPregunta.RESPUESTA_CORTA || tipo === "numerical") {
+    return TipoPregunta.RESPUESTA_CORTA;
+  }
+  return null;
+}
+
+/** Valida una pregunta ya guardada en Mongo (verificación docente). */
+export function validarPreguntaPersistida(
+  doc: Record<string, unknown>
+): ResultadoValidacionPregunta {
+  const tipo = normalizarTipoPersistido(doc.tipo);
+  if (!tipo) {
+    return { valida: false, mensaje: "Tipo de pregunta no soportado" };
+  }
+
+  const texto = String(doc.texto ?? "").trim();
+  if (!texto) {
+    return { valida: false, mensaje: "El texto es obligatorio" };
+  }
+
+  const puntosRaw = Number(doc.puntos);
+  if (!Number.isFinite(puntosRaw) || puntosRaw <= 0) {
+    return { valida: false, mensaje: "Los puntos son obligatorios" };
+  }
+
+  const base = {
+    texto,
+    quizId: String(doc.quizId ?? "quiz"),
+    puntos: puntosRaw,
+    tiempoLimite: Math.max(1, Number(doc.tiempoLimite) || 30),
+    activa: doc.activa !== false,
+    explicacion: doc.explicacion ? String(doc.explicacion) : undefined,
+    tema: doc.tema ? String(doc.tema) : undefined,
+    imagenReferencia: doc.imagenReferencia
+      ? String(doc.imagenReferencia)
+      : undefined,
+  };
+
+  let candidato: z.infer<typeof crearPreguntaSchema>;
+
+  if (tipo === TipoPregunta.MULTIPLE_OPCION) {
+    candidato = {
+      ...base,
+      tipo: TipoPregunta.MULTIPLE_OPCION,
+      opciones: Array.isArray(doc.opciones)
+        ? doc.opciones.map((o) => String(o).trim()).filter(Boolean)
+        : [],
+      respuestaCorrecta: doc.respuestaCorrecta as number | number[],
+      permiteMultiples: Boolean(doc.permiteMultiples),
+    };
+  } else if (tipo === TipoPregunta.VERDADERO_FALSO) {
+    candidato = {
+      ...base,
+      tipo: TipoPregunta.VERDADERO_FALSO,
+      opciones: ["Verdadero", "Falso"],
+      respuestaCorrecta: doc.respuestaCorrecta as boolean,
+    };
+  } else {
+    candidato = {
+      ...base,
+      tipo: TipoPregunta.RESPUESTA_CORTA,
+      respuestaCorrecta: (doc.respuestaCorrecta ?? "") as string | string[],
+      criteriosEvaluacion: doc.criteriosEvaluacion
+        ? String(doc.criteriosEvaluacion)
+        : undefined,
+      requiereCorreccionManual: Boolean(doc.requiereCorreccionManual),
+      caseSensitive: Boolean(doc.caseSensitive),
+    };
+  }
+
+  const parsed = crearPreguntaSchema.safeParse(candidato);
+  if (!parsed.success) {
+    const first = parsed.error.errors[0];
+    return {
+      valida: false,
+      mensaje: first?.message ?? "Datos de pregunta inválidos",
+    };
+  }
+
+  const errorLogico = validarRespuestaCorrecta(parsed.data);
+  if (errorLogico) {
+    return { valida: false, mensaje: errorLogico };
+  }
+
+  return { valida: true };
+}
+
+/** Valida antes de insertar preguntas generadas por IA. */
+export function validarCrearPreguntaParaPersistencia(datos: CrearPregunta): void {
+  parsearCrearPregunta(datos);
 }

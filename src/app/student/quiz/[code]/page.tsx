@@ -3,7 +3,7 @@
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, AlertTriangle, LogOut } from "lucide-react";
+import { Users, AlertTriangle, LogOut, Hash } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { salirQuiz } from "@/lib/salirQuiz";
@@ -63,7 +63,7 @@ export default function QuizLobbyPage() {
 
   if (loading || !session) {
     return (
-      <div className="page-shell flex items-center justify-center min-h-screen">
+      <div className="page-shell flex items-center justify-center min-h-screen min-h-[100dvh]">
         <p className="body-text text-muted-foreground">Cargando...</p>
       </div>
     );
@@ -88,11 +88,12 @@ export default function QuizLobbyPage() {
             </div>
 
             <div className="p-3 bg-muted rounded-md border border-border">
-              <p className="body-small font-medium text-primary">
-                PIN del Quiz: <span className="font-bold">{pin}</span>
+              <p className="body-small font-medium text-primary flex items-center justify-center gap-2">
+                <Hash className="h-5 w-5 icono-pin-lobby" aria-hidden="true" />
+                PIN del Quiz: <span className="font-bold tracking-widest">{pin}</span>
               </p>
               <div className="flex items-center justify-center gap-2 mt-1 body-small text-muted-foreground">
-                <Users className="h-4 w-4" />
+                <Users className="h-4 w-4 icono-usuarios-lobby" />
                 <span>{session.players?.length || 0} jugadores unidos</span>
               </div>
             </div>
@@ -117,7 +118,7 @@ export default function QuizLobbyPage() {
             <Button
               variant="destructive"
               size="lg"
-              className="w-full flex items-center justify-center gap-2 font-semibold"
+              className="w-full min-h-11 flex items-center justify-center gap-2 font-semibold"
               onClick={async () => {
                 await salirQuiz(pin);
                 router.push("/student");

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { RolUsuario } from "@/app/types/usuario";
-import { AuthError, requerirRol } from "@/lib/server/auth/requerir-auth";
+import { AuthError, requerirAccesoDocente } from "@/lib/server/auth/requerir-auth";
 import { conectarDB } from "@/lib/server/database";
 import { QuizIaService } from "@/lib/server/services/quiz-ia.service";
 import { refinarQuizIaSchema } from "@/lib/server/validators/quiz-ia";
@@ -15,10 +14,7 @@ export async function PATCH(request: Request, { params }: Params) {
   try {
     await conectarDB();
 
-    const payload = await requerirRol([
-      RolUsuario.DOCENTE,
-      RolUsuario.ADMINISTRADOR,
-    ]);
+    const payload = await requerirAccesoDocente();
 
     const quizId = params.quizId?.trim().replace(/\/+$/, "");
     if (!quizId) {

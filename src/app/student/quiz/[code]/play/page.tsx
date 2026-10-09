@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Clock } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { obtenerUsuarioActual } from "@/lib/client/auth";
 import { listarPreguntas } from "@/lib/client/services/preguntas";
 import {
@@ -11,15 +11,28 @@ import {
   unirseSesion,
 } from "@/lib/client/services/sesiones";
 import {
+  etiquetaTipoPreguntaPlay,
   preguntaApiToUi,
   type QuestionUi,
 } from "@/lib/client/mappers/pregunta-ui";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
+import { BarraTiempoSesion } from "@/components/barra-tiempo-sesion";
+import { ImagenReferenciaPregunta } from "@/components/imagen-referencia-pregunta";
+import { TableroOpciones } from "@/components/tablero-opciones";
 import { useSesionLive } from "@/hooks/useSesionLive";
 import { useSesionTimer } from "@/hooks/useSesionTimer";
+
+function pistaCantidadOpcionMultiple(cantidad: number): string {
+  if (cantidad === 1) {
+    return "Selecciona 1 respuesta correcta.";
+  }
+  if (cantidad >= 2) {
+    return `Hay ${cantidad} respuestas correctas. Selecciónalas todas antes de pulsar Listo.`;
+  }
+  return "Puedes marcar varias opciones. Pulsa Listo cuando termines.";
+}
 
 export default function StudentPlayPage() {
   const params = useParams();
@@ -30,11 +43,14 @@ export default function StudentPlayPage() {
   const [questions, setQuestions] = useState<QuestionUi[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<QuestionUi | null>(null);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const timeoutSubmitRef = useRef(false);
   const [player, setPlayer] = useState<{ id: string; name: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [answered, setAnswered] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const [similitud, setSimilitud] = useState<number | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [totalScore, setTotalScore] = useState(0);
   const [frozenTimeLeft, setFrozenTimeLeft] = useState<number | null>(null);
@@ -59,6 +75,24 @@ export default function StudentPlayPage() {
     answered && frozenTimeLeft !== null
       ? Math.min(100, Math.max(0, (frozenTimeLeft / limitSec) * 100))
       : progress;
+
+  const esEscrita =
+    currentQuestion?.questionType === "numerical" ||
+    currentQuestion?.questionType === "exact-text" ||
+    currentQuestion?.questionType === "open-text";
+  const esOpcionMultiple =
+    currentQuestion?.questionType === "multiple-choice" &&
+    Boolean(currentQuestion?.permiteMultiples);
+
+  const cantidadCorrectas = useMemo(() => {
+    if (!esOpcionMultiple || !currentQuestion?.options) return 0;
+    return currentQuestion.options.filter((o) => o.isCorrect).length;
+  }, [esOpcionMultiple, currentQuestion?.id, currentQuestion?.options]);
+
+  const textoPistaMultiple = useMemo(() => {
+    if (!esOpcionMultiple) return null;
+    return pistaCantidadOpcionMultiple(cantidadCorrectas);
+  }, [esOpcionMultiple, cantidadCorrectas]);
 
   useEffect(() => {
     if (!pin) return;
@@ -122,14 +156,28 @@ export default function StudentPlayPage() {
       setAnswered(false);
       setSubmitting(false);
       setSelectedOption(null);
+      setSelectedIds([]);
+      timeoutSubmitRef.current = false;
       setIsCorrect(null);
+      setSimilitud(null);
       setFrozenTimeLeft(null);
 
       obtenerProgresoSesion(pin).then((progreso) => {
         const prev = progreso.currentQuestionAnswer;
         if (prev && prev.questionIndex === index) {
           setAnswered(true);
-          setSelectedOption(prev.answerId);
+          if (prev.answerId.includes(",")) {
+            setSelectedIds(
+              prev.answerId
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean)
+            );
+            setSelectedOption(null);
+          } else {
+            setSelectedOption(prev.answerId);
+            setSelectedIds([]);
+          }
           setIsCorrect(prev.correct);
           setTotalScore(progreso.totalScore);
           setFrozenTimeLeft(prev.timeLeft);
@@ -138,26 +186,64 @@ export default function StudentPlayPage() {
     }
   }, [currentQuestionIndex, questions, currentQuestion?.id, pin]);
 
-  const sendAnswer = async (optionId: string | null = selectedOption) => {
+  const buildAnswerPayload = (
+    question: QuestionUi,
+    answerId: string
+  ): { answerId: string; answerText: string } => {
+    if (question.questionType !== "multiple-choice" || !question.options) {
+      return { answerId, answerText: answerId };
+    }
+    if (question.permiteMultiples) {
+      const ids = answerId
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .sort();
+      const normalizedId = ids.join(",");
+      const answerText = ids
+        .map((id) => question.options!.find((o) => o.id === id)?.text ?? id)
+        .join(" | ");
+      return { answerId: normalizedId, answerText };
+    }
+    const opt = question.options.find((o) => o.id === answerId);
+    return { answerId, answerText: opt?.text ?? answerId };
+  };
+
+  const sendAnswer = async (optionId?: string | null) => {
     if (!player || !currentQuestion || !session || answered || submitting) return;
 
-    const answerId = optionId || selectedOption || "";
+    let answerId: string;
+    if (currentQuestion.permiteMultiples && currentQuestion.questionType === "multiple-choice") {
+      if (optionId != null && optionId !== "") {
+        answerId = optionId;
+      } else {
+        answerId = [...selectedIds].sort().join(",");
+      }
+    } else {
+      answerId = optionId ?? selectedOption ?? "";
+    }
+
     if (!answerId) return;
 
     setSubmitting(true);
     setFrozenTimeLeft(timeLeft);
-    setSelectedOption(answerId);
 
-    let answerText = answerId;
-    if (currentQuestion.questionType === "multiple-choice" && currentQuestion.options) {
-      const opt = currentQuestion.options.find((o) => o.id === answerId);
-      answerText = opt?.text ?? answerId;
+    const { answerId: normalizedId, answerText } = buildAnswerPayload(
+      currentQuestion,
+      answerId
+    );
+
+    if (currentQuestion.permiteMultiples) {
+      setSelectedIds(normalizedId.split(",").filter(Boolean));
+      setSelectedOption(null);
+    } else {
+      setSelectedOption(normalizedId);
     }
 
     try {
       const result = await enviarRespuestaSesion(pin, {
         questionId: currentQuestion.id,
-        answerId,
+        answerId: normalizedId,
         answerText,
         timeLeft,
         questionIndex: currentQuestionIndex,
@@ -165,15 +251,53 @@ export default function StudentPlayPage() {
 
       setIsCorrect(result.correct);
       setTotalScore(result.totalScore);
+      setSimilitud(
+        typeof result.similitud === "number" ? result.similitud : null
+      );
       setAnswered(true);
     } catch (error) {
       console.error("Error al guardar respuesta:", error);
       setFrozenTimeLeft(null);
-      setSelectedOption(null);
+      if (currentQuestion.permiteMultiples) {
+        setSelectedIds([]);
+      } else {
+        setSelectedOption(null);
+      }
     } finally {
       setSubmitting(false);
     }
   };
+
+  const toggleOpcionMultiple = (id: string) => {
+    if (answered || submitting) return;
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  useEffect(() => {
+    if (
+      !esOpcionMultiple ||
+      answered ||
+      submitting ||
+      session?.status !== "active" ||
+      timeLeft > 0 ||
+      selectedIds.length === 0 ||
+      timeoutSubmitRef.current
+    ) {
+      return;
+    }
+    timeoutSubmitRef.current = true;
+    const payload = [...selectedIds].sort().join(",");
+    sendAnswer(payload);
+  }, [
+    esOpcionMultiple,
+    answered,
+    submitting,
+    session?.status,
+    timeLeft,
+    selectedIds,
+  ]);
 
   useEffect(() => {
     if (session && questions.length > 0 && currentQuestion) {
@@ -189,57 +313,49 @@ export default function StudentPlayPage() {
     );
   }
 
+  const porcentajeSimilitud =
+    similitud !== null ? Math.round(similitud * 100) : null;
+
   return (
     <div className="page-shell quiz-play-shell">
       <main className="quiz-play-main">
-        {/* Timer sincronizado con docente (qScheduledAt + qTimeLimitSec) */}
-        <div className="quiz-timer-bar">
-          <div className="flex items-center justify-between gap-3 mb-2">
-            <span className="text-sm font-medium text-muted-foreground">
-              Pregunta {currentQuestionIndex + 1} de {questions.length}
-            </span>
-            <div className="flex items-center gap-2 shrink-0">
-              <Clock className="h-4 w-4 text-muted-foreground hidden sm:block" />
-              <span
-                className={`text-xl sm:text-2xl font-bold tabular-nums ${
-                  displayTimeLeft <= 10 ? "text-destructive" : "text-primary"
-                }`}
-              >
-                {displayFormatted}
-              </span>
-            </div>
-          </div>
-          <Progress value={displayProgress} className="h-2 sm:h-2.5" />
-        </div>
+        <BarraTiempoSesion
+          formatted={displayFormatted}
+          timeLeft={displayTimeLeft}
+          progress={displayProgress}
+          etiqueta={`Pregunta ${currentQuestionIndex + 1} de ${questions.length}`}
+        />
 
-        <Card className="card-institutional w-full shadow-sm">
-          <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
-            <CardTitle className="heading-tertiary text-base sm:text-lg">
-              Responde a continuación
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
-            <h2 className="question-text mb-4 sm:mb-6 whitespace-pre-wrap break-words">
+        <div className="quiz-play-tablero">
+          <section className="quiz-play-pregunta">
+            <Badge variant="secondary" className="quiz-play-tipo-badge mb-2">
+              {etiquetaTipoPreguntaPlay(currentQuestion)}
+            </Badge>
+            <p className="quiz-play-pregunta-kicker">Responde a continuación</p>
+            {esOpcionMultiple && cantidadCorrectas > 0 && textoPistaMultiple ? (
+              <p className="text-sm font-medium text-primary mb-2">
+                {textoPistaMultiple}
+              </p>
+            ) : null}
+            <h2 className="question-text quiz-play-enunciado whitespace-pre-wrap break-words">
               {currentQuestion.question}
             </h2>
+          </section>
 
-            {currentQuestion.questionType === "numerical" ||
-            currentQuestion.questionType === "exact-text" ? (
-              <div className="mb-4 sm:mb-6 space-y-3">
+          <section className="quiz-play-respuestas">
+            {currentQuestion.imageUrl ? (
+              <ImagenReferenciaPregunta imageUrl={currentQuestion.imageUrl} />
+            ) : null}
+            {esEscrita ? (
+              <div className="space-y-3">
                 <Input
                   type="text"
-                  inputMode={
-                    currentQuestion.questionType === "numerical" ? "decimal" : "text"
-                  }
-                  className="input-institutional w-full min-h-11 text-base"
+                  inputMode="text"
+                  className="input-institutional w-full min-h-11 text-base bg-white text-black placeholder:text-neutral-500"
                   disabled={answered || submitting}
                   value={selectedOption ?? ""}
                   onChange={(e) => setSelectedOption(e.target.value)}
-                  placeholder={
-                    currentQuestion.questionType === "numerical"
-                      ? `Respuesta numérica (${currentQuestion.unit ?? "unidad"})`
-                      : "Escribe tu respuesta exacta"
-                  }
+                  placeholder="Palabra, número o código (ej. 5, Software , derecho)"
                 />
                 <Button
                   className="btn-primary w-full min-h-11 text-base"
@@ -250,52 +366,88 @@ export default function StudentPlayPage() {
                 </Button>
               </div>
             ) : (
-              <div className="answers-grid mb-4 sm:mb-6">
-                {currentQuestion.options?.map((opt, i) => (
-                  <Button
-                    key={opt.id || i}
-                    variant={selectedOption === opt.id ? "default" : "outline"}
-                    className="answer-button text-left justify-start h-auto py-3 sm:py-4"
-                    disabled={answered || submitting}
-                    onClick={() => {
-                      setSelectedOption(opt.id);
-                      sendAnswer(opt.id);
-                    }}
-                  >
-                    <span className="break-words">{opt.text}</span>
-                  </Button>
-                ))}
+              <div className="space-y-3">
+                <TableroOpciones
+                  opciones={currentQuestion.options ?? []}
+                  modoMultiple={esOpcionMultiple}
+                  seleccionada={esOpcionMultiple ? null : selectedOption}
+                  seleccionadas={esOpcionMultiple ? selectedIds : []}
+                  deshabilitado={answered || submitting}
+                  onSeleccionar={(id) => {
+                    if (esOpcionMultiple) {
+                      toggleOpcionMultiple(id);
+                      return;
+                    }
+                    setSelectedOption(id);
+                    sendAnswer(id);
+                  }}
+                />
+                {esOpcionMultiple ? (
+                  <>
+                    <p className="text-sm text-muted-foreground text-center sm:text-left">
+                      {textoPistaMultiple ??
+                        "Puedes marcar varias opciones. Pulsa Listo cuando termines."}
+                    </p>
+                    {cantidadCorrectas > 0 ? (
+                      <p className="text-sm font-medium text-center sm:text-left">
+                        Seleccionadas: {selectedIds.length} de {cantidadCorrectas}
+                      </p>
+                    ) : null}
+                    <Button
+                      className="btn-primary w-full min-h-11 text-base"
+                      disabled={
+                        answered || submitting || selectedIds.length === 0
+                      }
+                      onClick={() => sendAnswer()}
+                    >
+                      Listo
+                    </Button>
+                  </>
+                ) : null}
               </div>
             )}
+          </section>
+        </div>
 
-            {submitting && (
-              <div className="mt-4 p-4 sm:p-5 bg-muted/50 border border-border rounded-xl text-center">
-                <p className="body-small text-muted-foreground">Verificando respuesta...</p>
-              </div>
-            )}
+        {submitting && (
+          <div className="quiz-play-feedback">
+            <p className="body-small text-muted-foreground">Verificando respuesta...</p>
+          </div>
+        )}
 
-            {answered && isCorrect !== null && (
-              <div className="mt-4 p-4 sm:p-5 bg-muted/80 border border-border rounded-xl">
-                <div className="text-center space-y-2">
-                  <p className="body-small text-muted-foreground">
-                    Puntaje total:{" "}
-                    <span className="font-bold text-lg text-primary">{totalScore}</span> puntos
-                  </p>
-                  <p
-                    className={`text-xl sm:text-2xl font-semibold ${
-                      isCorrect === true ? "text-success" : "text-error"
-                    }`}
-                  >
-                    {isCorrect === true ? "¡Respuesta correcta!" : "¡Respuesta incorrecta!"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Espera a que el docente avance a la siguiente pregunta
-                  </p>
-                </div>
-              </div>
+        {answered && isCorrect !== null && (
+          <div
+            className={`quiz-play-feedback ${
+              isCorrect ? "quiz-play-feedback-ok" : "quiz-play-feedback-error"
+            }`}
+          >
+            {isCorrect ? (
+              <CheckCircle2 className="icono-acierto h-10 w-10 text-success mx-auto" />
+            ) : (
+              <XCircle className="icono-error h-10 w-10 text-error mx-auto" />
             )}
-          </CardContent>
-        </Card>
+            <p className="body-small text-muted-foreground mt-2">
+              Puntaje total:{" "}
+              <span className="font-bold text-lg text-primary">{totalScore}</span> puntos
+            </p>
+            <p
+              className={`text-xl sm:text-2xl font-semibold ${
+                isCorrect ? "text-success" : "text-error"
+              }`}
+            >
+              {isCorrect ? "¡Respuesta correcta!" : "¡Respuesta incorrecta!"}
+            </p>
+            {porcentajeSimilitud !== null && (
+              <p className="text-sm sm:text-base font-medium mt-1">
+                Parecido al {porcentajeSimilitud}% —{" "}
+                {isCorrect ? "válida" : "no válida"}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">
+              Espera a que el docente avance a la siguiente pregunta
+            </p>
+          </div>
+        )}
       </main>
     </div>
   );

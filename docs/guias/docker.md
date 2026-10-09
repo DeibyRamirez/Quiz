@@ -1,6 +1,6 @@
 # Docker — contenedor y despliegue
 
-Guía para empaquetar **Electro Quiz** con Docker: decisiones de arquitectura, uso local, producción y camino de escalabilidad.
+Guía para empaquetar **QuimeQuiz** con Docker: decisiones de arquitectura, uso local, producción y camino de escalabilidad.
 
 ## Decisión de arquitectura: ¿un contenedor o varios?
 
@@ -178,17 +178,17 @@ docker build \
   --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=... \
   --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=... \
   --build-arg NEXT_PUBLIC_FIREBASE_APP_ID=... \
-  -t electro-quiz:latest .
+  -t quime-quiz:latest .
 
 docker run -d \
-  --name electro-quiz \
+  --name quime-quiz \
   -p 3000:3000 \
   -e MONGODB_URI="mongodb+srv://..." \
   -e JWT_SECRET="..." \
   -e FIREBASE_SERVICE_ACCOUNT='{"type":"service_account",...}' \
   -e NEXT_PUBLIC_APP_URL="https://tu-dominio.com" \
   -e HOSTNAME=0.0.0.0 \
-  electro-quiz:latest
+  quime-quiz:latest
 ```
 
 ---

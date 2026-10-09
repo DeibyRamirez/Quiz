@@ -28,3 +28,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Imágenes de preguntas (montar volumen en Docker)
+recursos-quiz/**
+!recursos-quiz/.gitkeep

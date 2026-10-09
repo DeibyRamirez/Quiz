@@ -45,14 +45,19 @@ export function preguntaIaToCrearPregunta(
         permiteMultiples: true,
       };
 
-    case "open_text":
+    case "open_text": {
+      const expected = (
+        pregunta.expectedAnswer ??
+        pregunta.evaluationCriteria ??
+        ""
+      ).trim();
       return {
         ...base,
         tipo: TipoPregunta.RESPUESTA_CORTA,
-        respuestaCorrecta: "",
-        criteriosEvaluacion: pregunta.evaluationCriteria,
-        requiereCorreccionManual: true,
+        respuestaCorrecta: expected,
+        caseSensitive: false,
       };
+    }
 
     default: {
       const _exhaustive: never = pregunta;
@@ -129,11 +134,16 @@ export function preguntasToEstadoCompacto(
       };
     }
 
-    if (p.requiereCorreccionManual) {
+    if (p.tipo === TipoPregunta.RESPUESTA_CORTA) {
+      const raw = Array.isArray(p.respuestaCorrecta)
+        ? p.respuestaCorrecta[0]
+        : p.respuestaCorrecta;
+      const expected =
+        String(raw ?? "").trim() || (p.criteriosEvaluacion ?? "").trim();
       return {
         type: "open_text" as const,
         question: p.texto,
-        evaluationCriteria: p.criteriosEvaluacion ?? "",
+        expectedAnswer: expected,
         explanation: p.explicacion,
       };
     }
@@ -141,7 +151,7 @@ export function preguntasToEstadoCompacto(
     return {
       type: "open_text" as const,
       question: p.texto,
-      evaluationCriteria: p.explicacion ?? "Evaluar según contenido de la guía.",
+      expectedAnswer: p.explicacion ?? "",
       explanation: p.explicacion,
     };
   });

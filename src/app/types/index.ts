@@ -20,6 +20,8 @@ export {
   EstadoQuiz,
   ESTADOS_QUIZ,
   isQuizPublicado,
+  etiquetaEstadoQuiz,
+  esQuizListoParaUi,
   validarQuiz,
   puedeIniciarSesion,
 } from "./quiz";

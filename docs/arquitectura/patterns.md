@@ -1,6 +1,6 @@
 # Patrones de código
 
-Convenciones usadas en Electro Quiz para mantener el código predecible entre frontend, API y Mongo.
+Convenciones usadas en QuimeQuiz para mantener el código predecible entre frontend, API y Mongo.
 
 ## Organización por dominio
 

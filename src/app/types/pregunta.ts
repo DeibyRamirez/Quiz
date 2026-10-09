@@ -18,6 +18,11 @@ interface PreguntaBase extends EntidadBase, Timestamps {
   criteriosEvaluacion?: string;
   requiereCorreccionManual?: boolean;
   tema?: string;
+  /** Ruta relativa en disco, ej. recursos-quiz/{quizId}/{preguntaId}.png */
+  imagenReferencia?: string;
+  /** Docente confirmó la pregunta en editar (flujo quiz IA). */
+  revisadaPorDocente?: boolean;
+  revisadaPorDocenteEn?: Date | string;
 }
 
 export interface PreguntaMultipleOpcion extends PreguntaBase {

@@ -19,7 +19,7 @@ import { ArrowLeft, Save, Plus, Trash2, Edit, X } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
-import { EstadoQuiz } from "@/app/types";
+import { EstadoQuiz, etiquetaEstadoQuiz } from "@/app/types";
 import {
   type QuizFormState,
   type QuestionFormState,
@@ -29,7 +29,10 @@ import {
   FieldGroup,
   answersEqual,
   buildCanSaveQuestion,
+  textareaFormularioSolido,
+  inputFormularioSolido,
 } from "@/app/teacher/_components/quiz-form-shared";
+import { ImagenPreguntaField } from "@/app/teacher/_components/imagen-pregunta-field";
 import { obtenerUsuarioActual } from "@/lib/client/auth";
 import { crearQuiz, actualizarQuiz } from "@/lib/client/services/quizzes";
 import {
@@ -42,10 +45,10 @@ import {
   type AnswerUi,
   type QuestionTypeUi,
   type QuestionUi,
-  QUESTION_TYPE_LABELS,
   preguntaApiToUi,
   preguntaUiToCrear,
   preguntaUiToActualizar,
+  etiquetaTipoPreguntaPlay,
 } from "@/lib/client/mappers/pregunta-ui";
 
 export default function CreateQuizUnified() {
@@ -87,6 +90,7 @@ export default function CreateQuizUnified() {
 
   const [exactAnswerText, setExactAnswerText] = useState("");
   const [originalExactAnswerText, setOriginalExactAnswerText] = useState("");
+  const [questionImagenRef, setQuestionImagenRef] = useState<string | undefined>();
 
   const recargarPreguntas = async (quizId: string) => {
     const data = await listarPreguntas(quizId, { incluirInactivas: true });
@@ -135,7 +139,7 @@ export default function CreateQuizUnified() {
         numericalUnit !== originalNumericalUnit
       );
     }
-    if (questionType === "exact-text") {
+    if (questionType === "exact-text" || questionType === "open-text") {
       return exactAnswerText !== originalExactAnswerText;
     }
     return !answersEqual(answers, originalAnswers);
@@ -159,6 +163,24 @@ export default function CreateQuizUnified() {
       numericalUnit,
       exactAnswerText,
     ]
+  );
+
+  const opcionesPreviewImagen = useMemo(() => {
+    if (questionType === "true-false") return ["Verdadero", "Falso"];
+    if (questionType === "multiple-choice") {
+      const texts = answers.map((a) => a.text.trim()).filter(Boolean);
+      return texts.length > 0 ? texts : undefined;
+    }
+    return undefined;
+  }, [questionType, answers]);
+
+  const etiquetaTipoImagen = useMemo(
+    () =>
+      etiquetaTipoPreguntaPlay({
+        questionType,
+        permiteMultiples: questionForm.permiteMultiples,
+      }),
+    [questionType, questionForm.permiteMultiples]
   );
 
   async function handleSaveQuiz() {
@@ -216,7 +238,7 @@ export default function CreateQuizUnified() {
     } else if (type === "numerical") {
       setNumericalInput("");
       setNumericalUnit("");
-    } else if (type === "exact-text") {
+    } else if (type === "exact-text" || type === "open-text") {
       setExactAnswerText("");
     }
   };
@@ -246,7 +268,9 @@ export default function CreateQuizUnified() {
       tema: questionForm.tema.trim() || undefined,
       permiteMultiples: questionForm.permiteMultiples,
       exactAnswerText:
-        questionType === "exact-text" ? exactAnswerText.trim() : undefined,
+        questionType === "exact-text" || questionType === "open-text"
+          ? exactAnswerText.trim()
+          : undefined,
     };
   }
 
@@ -282,18 +306,16 @@ export default function CreateQuizUnified() {
     }
 
     if (questionType === "numerical") {
-      const trimmed = numericalInput.trim();
-      if (!trimmed || Number.isNaN(parseFloat(trimmed))) {
-        toast.warning("Ingresa un valor numérico válido.");
-        return;
-      }
-      if (!numericalUnit) {
-        toast.warning("Selecciona una unidad.");
+      if (!numericalInput.trim()) {
+        toast.warning("La respuesta correcta es obligatoria.");
         return;
       }
     }
 
-    if (questionType === "exact-text" && !exactAnswerText.trim()) {
+    if (
+      (questionType === "exact-text" || questionType === "open-text") &&
+      !exactAnswerText.trim()
+    ) {
       toast.warning("La respuesta correcta es obligatoria.");
       return;
     }
@@ -313,15 +335,19 @@ export default function CreateQuizUnified() {
           preguntaUiToActualizar(questionUi, answers, numerical)
         );
         toast.success("Pregunta actualizada.");
+        await recargarPreguntas(savedQuizId);
+        resetQuestionForm();
       } else {
-        await crearPregunta(
+        const creada = await crearPregunta(
           preguntaUiToCrear(questionUi, savedQuizId, answers, numerical)
         );
-        toast.success("Pregunta agregada.");
+        setSelectedQuestionId(creada.id);
+        setQuestionImagenRef(
+          (creada as { imagenReferencia?: string }).imagenReferencia
+        );
+        toast.success("Pregunta agregada. Ya puedes subir una imagen opcional.");
+        await recargarPreguntas(savedQuizId);
       }
-
-      await recargarPreguntas(savedQuizId);
-      resetQuestionForm();
     } catch (err) {
       console.error("Error al guardar la pregunta:", err);
       toast.error("Error al guardar la pregunta.");
@@ -353,6 +379,7 @@ export default function CreateQuizUnified() {
 
   function editQuestion(q: QuestionUi) {
     setSelectedQuestionId(q.id);
+    setQuestionImagenRef(q.imagenReferencia);
     setQuestionType(q.questionType);
     const numero = questions.findIndex((item) => item.id === q.id) + 1;
     toast.info(numero > 0 ? `Editando pregunta ${numero}` : "Editando pregunta");
@@ -369,14 +396,20 @@ export default function CreateQuizUnified() {
     setQuestionForm(form);
 
     if (q.questionType === "numerical") {
-      setNumericalInput(q.correctValue?.toString() ?? "");
-      setNumericalUnit(q.unit ?? "");
+      setQuestionType("exact-text");
+      setExactAnswerText(
+        q.correctValue !== undefined ? String(q.correctValue) : ""
+      );
+      setNumericalInput("");
+      setNumericalUnit("");
       setAnswers([
         { id: "1", text: "", isCorrect: false },
         { id: "2", text: "", isCorrect: false },
       ]);
-      setExactAnswerText("");
-    } else if (q.questionType === "exact-text") {
+    } else if (
+      q.questionType === "exact-text" ||
+      q.questionType === "open-text"
+    ) {
       setExactAnswerText(q.exactAnswerText ?? "");
       setNumericalInput("");
       setNumericalUnit("");
@@ -427,6 +460,7 @@ export default function CreateQuizUnified() {
     setOriginalNumericalInput("");
     setOriginalNumericalUnit("");
     setOriginalExactAnswerText("");
+    setQuestionImagenRef(undefined);
   }
 
   const toggleCorrectAnswer = (id: string) => {
@@ -465,9 +499,9 @@ export default function CreateQuizUnified() {
     <div className="page-shell">
       <Navigation />
       <main className="page-main space-y-8">
-        <div className="flex items-center gap-4 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 min-w-0">
           <Link href="/teacher">
-            <Button variant="outline" size="sm" className="border-primary text-primary">
+            <Button variant="outline" size="sm" className="border-primary text-primary min-h-11">
               <ArrowLeft className="mr-2 h-4 w-4" /> Volver
             </Button>
           </Link>
@@ -488,7 +522,7 @@ export default function CreateQuizUnified() {
                   onChange={(e) =>
                     setQuizData({ ...quizData, title: e.target.value })
                   }
-                  className="input-institutional"
+                  className={`input-institutional ${inputFormularioSolido}`}
                 />
               </FieldGroup>
 
@@ -504,7 +538,9 @@ export default function CreateQuizUnified() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={EstadoQuiz.BORRADOR}>Borrador</SelectItem>
-                    <SelectItem value={EstadoQuiz.PUBLICADO}>Publicado</SelectItem>
+                    <SelectItem value={EstadoQuiz.PUBLICADO}>
+                      {etiquetaEstadoQuiz(EstadoQuiz.PUBLICADO)}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </FieldGroup>
@@ -523,6 +559,7 @@ export default function CreateQuizUnified() {
                   setQuizData({ ...quizData, description: e.target.value })
                 }
                 rows={3}
+                className={textareaFormularioSolido}
               />
             </FieldGroup>
 
@@ -565,7 +602,7 @@ export default function CreateQuizUnified() {
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="outline">#{index + 1}</Badge>
                         <Badge className="badge-primary">
-                          {QUESTION_TYPE_LABELS[q.questionType]}
+                          {etiquetaTipoPreguntaPlay(q)}
                         </Badge>
                         <Badge variant="secondary">{q.points} pts</Badge>
                         <Badge variant="outline">{q.timeLimit}s</Badge>
@@ -579,6 +616,13 @@ export default function CreateQuizUnified() {
                       <p className="text-sm sm:text-base whitespace-pre-wrap wrap-break-word">
                         {q.question}
                       </p>
+                      {q.imageUrl ? (
+                        <img
+                          src={q.imageUrl}
+                          alt=""
+                          className="mt-2 max-h-20 rounded border border-border object-contain bg-white"
+                        />
+                      ) : null}
                     </div>
 
                     <div className="flex flex-wrap gap-2 shrink-0">
@@ -636,11 +680,8 @@ export default function CreateQuizUnified() {
                         <SelectItem value="true-false">
                           Verdadero / Falso
                         </SelectItem>
-                        <SelectItem value="numerical">
-                          Numérica (con unidad)
-                        </SelectItem>
                         <SelectItem value="exact-text">
-                          Respuesta exacta (palabra o número)
+                          Respuesta corta (palabra o número)
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -656,7 +697,7 @@ export default function CreateQuizUnified() {
                       value={questionForm.tema}
                       onChange={(e) => updateQuestionForm({ tema: e.target.value })}
                       placeholder="Clasificación del contenido"
-                      className="input-institutional"
+                      className={`input-institutional ${inputFormularioSolido}`}
                     />
                   </FieldGroup>
                 </div>
@@ -670,8 +711,21 @@ export default function CreateQuizUnified() {
                       updateQuestionForm({ question: e.target.value })
                     }
                     rows={4}
+                    className={textareaFormularioSolido}
                   />
                 </FieldGroup>
+
+                <ImagenPreguntaField
+                  preguntaId={selectedQuestionId}
+                  imagenReferencia={questionImagenRef}
+                  textoPregunta={questionForm.question}
+                  opcionesPreview={opcionesPreviewImagen}
+                  etiquetaTipo={etiquetaTipoImagen}
+                  onChange={(ref) => {
+                    setQuestionImagenRef(ref);
+                    if (savedQuizId) recargarPreguntas(savedQuizId).catch(() => {});
+                  }}
+                />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <FieldGroup label="Tiempo límite" htmlFor="question-time">
@@ -756,56 +810,23 @@ export default function CreateQuizUnified() {
                       updateQuestionForm({ explanation: e.target.value })
                     }
                     rows={3}
+                    className={textareaFormularioSolido}
                   />
                 </FieldGroup>
-
-                {questionType === "numerical" && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-border rounded-lg bg-muted/30">
-                    <FieldGroup label="Valor correcto" htmlFor="numerical-value">
-                      <Input
-                        id="numerical-value"
-                        type="text"
-                        inputMode="decimal"
-                        placeholder="Ej: -144.25, 0.001"
-                        className="input-institutional font-mono hide-number-arrows"
-                        value={numericalInput}
-                        onChange={(e) => handleNumericalInput(e.target.value)}
-                      />
-                    </FieldGroup>
-                    <FieldGroup label="Unidad" htmlFor="numerical-unit">
-                      <Select
-                        value={numericalUnit}
-                        onValueChange={setNumericalUnit}
-                      >
-                        <SelectTrigger id="numerical-unit" className="input-institutional">
-                          <SelectValue placeholder="Seleccionar unidad" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="N">Newton (N)</SelectItem>
-                          <SelectItem value="C">Coulomb (C)</SelectItem>
-                          <SelectItem value="V">Voltio (V)</SelectItem>
-                          <SelectItem value="m">Metro (m)</SelectItem>
-                          <SelectItem value="J">Joule (J)</SelectItem>
-                          <SelectItem value="Otro">Otro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FieldGroup>
-                  </div>
-                )}
 
                 {questionType === "exact-text" && (
                   <div className="p-4 border border-border rounded-lg bg-muted/30">
                     <FieldGroup
                       label="Respuesta correcta"
                       htmlFor="exact-answer"
-                      hint="Una sola respuesta válida. Ej: Rojo, 8, Programación Orientada a Objetos."
+                      hint="Una palabra, número o código. No importan mayúsculas (ej. 5, Software, Derecho)."
                     >
                       <Input
                         id="exact-answer"
                         value={exactAnswerText}
                         onChange={(e) => setExactAnswerText(e.target.value)}
-                        placeholder="Ej: Rojo"
-                        className="input-institutional"
+                        placeholder="Ej: 5, Software, Derecho"
+                        className={`input-institutional ${inputFormularioSolido}`}
                       />
                     </FieldGroup>
                   </div>
@@ -837,7 +858,7 @@ export default function CreateQuizUnified() {
                               value={a.text}
                               onChange={(e) => updateAnswer(a.id, e.target.value)}
                               placeholder={`Opción ${i + 1}`}
-                              className="flex-1 input-institutional"
+                              className={`flex-1 input-institutional ${inputFormularioSolido}`}
                             />
                             {answers.length > 2 && (
                               <Button
@@ -869,7 +890,7 @@ export default function CreateQuizUnified() {
                               value={a.text}
                               onChange={(e) => updateAnswer(a.id, e.target.value)}
                               placeholder={`Opción ${i + 1}`}
-                              className="flex-1 input-institutional"
+                              className={`flex-1 input-institutional ${inputFormularioSolido}`}
                             />
                             {answers.length > 2 && (
                               <Button

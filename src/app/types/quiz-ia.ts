@@ -37,7 +37,10 @@ export interface PreguntaIaMultiChoice extends PreguntaIaBase {
 
 export interface PreguntaIaOpenText extends PreguntaIaBase {
   type: "open_text";
-  evaluationCriteria: string;
+  /** Respuesta exacta: palabra, número o siglas (ej. CRUD, SQL, 5). */
+  expectedAnswer?: string;
+  /** Alias legacy del motor IA; se normaliza a expectedAnswer al validar. */
+  evaluationCriteria?: string;
 }
 
 export type PreguntaIa =

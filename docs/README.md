@@ -1,4 +1,4 @@
-# Electro Quiz — Documentación
+# QuimeQuiz — Documentación
 
 Plataforma educativa de quizzes en tiempo real (estilo Kahoot). Los docentes crean quizzes y conducen sesiones en vivo con PIN; los estudiantes se unen, responden y ven resultados.
 

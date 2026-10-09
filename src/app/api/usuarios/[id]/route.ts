@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { RolUsuario } from "@/app/types/usuario";
+import { AuthError, requerirAuth, requerirRol } from "@/lib/server/auth/requerir-auth";
 import { conectarDB } from "@/lib/server/database";
 import { UsuarioModel } from "@/lib/server/models/Usuario";
 import { actualizarUsuarioSchema } from "@/lib/server/validators/usuario";
@@ -9,6 +11,7 @@ type Params = { params: { id: string } };
 
 export async function GET(_request: Request, { params }: Params) {
   try {
+    const sesion = await requerirAuth();
     await conectarDB();
 
     const usuario = await UsuarioModel.findById(params.id)
@@ -19,28 +22,32 @@ export async function GET(_request: Request, { params }: Params) {
       return respuestaError("Usuario no encontrado", 404);
     }
 
+    const esAdmin = sesion.rol === RolUsuario.ADMINISTRADOR;
+    const esPropio = params.id === sesion.sub;
+    if (!esAdmin && !esPropio) {
+      return respuestaError("No autorizado", 403);
+    }
+
     return NextResponse.json(serializarDocumento(usuario));
   } catch (error) {
+    if (error instanceof AuthError) {
+      return respuestaError(error.message, error.status);
+    }
     return manejarErrorApi(error);
   }
 }
 
 export async function PUT(request: Request, { params }: Params) {
   try {
+    await requerirRol([RolUsuario.ADMINISTRADOR]);
     await conectarDB();
 
     const body = await request.json();
     const datos = actualizarUsuarioSchema.parse(body);
 
-    const payload = { ...datos };
-    if (payload.contraseña) {
-      const { hashPassword } = await import("@/lib/server/auth/password");
-      payload.contraseña = await hashPassword(payload.contraseña);
-    }
-
     const usuario = await UsuarioModel.findByIdAndUpdate(
       params.id,
-      { $set: payload },
+      { $set: datos },
       { new: true, runValidators: true }
     )
       .select("-contraseña")
@@ -52,12 +59,16 @@ export async function PUT(request: Request, { params }: Params) {
 
     return NextResponse.json(serializarDocumento(usuario));
   } catch (error) {
+    if (error instanceof AuthError) {
+      return respuestaError(error.message, error.status);
+    }
     return manejarErrorApi(error);
   }
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
   try {
+    await requerirRol([RolUsuario.ADMINISTRADOR]);
     await conectarDB();
 
     const usuario = await UsuarioModel.findByIdAndDelete(params.id).lean();
@@ -68,6 +79,9 @@ export async function DELETE(_request: Request, { params }: Params) {
 
     return NextResponse.json({ ok: true, id: params.id });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return respuestaError(error.message, error.status);
+    }
     return manejarErrorApi(error);
   }
 }

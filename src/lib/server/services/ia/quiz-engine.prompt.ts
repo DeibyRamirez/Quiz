@@ -10,7 +10,7 @@ REGLAS DE ORO (TOKEN & QUALITY OPTIMIZATION):
    - 'true_false': question (string), answer (boolean), explanation (string).
    - 'single_choice': question (string), options (array de 4 strings exactos), correctIndex (number 0-3), explanation (string).
    - 'multi_choice': question (string), options (array de 4 a 5 strings), answer (array de number con los índices correctos), explanation (string).
-   - 'open_text': question (string), evaluationCriteria (string guía de corrección para el docente).
+   - 'open_text': question (string), expectedAnswer (string corto: una palabra, un número o siglas como CRUD/SQL; sin párrafos ni criterios de similitud), explanation (string).
 
 MODOS DE OPERACIÓN:
 - MODO CREACIÓN (mode=create): Analiza el Markdown limpio, extrae conceptos clave de los objetivos de aprendizaje de la guía y genera las preguntas solicitadas.

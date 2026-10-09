@@ -11,7 +11,7 @@ const ETIQUETAS_TIPO: Record<TipoPreguntaIa, string> = {
   true_false: "Verdadero / Falso",
   single_choice: "Opción única",
   multi_choice: "Opción múltiple",
-  open_text: "Desarrollo",
+  open_text: "Respuesta corta (exacta)",
 };
 
 interface PasoConfigurarProps {
@@ -98,21 +98,21 @@ export function PasoConfigurar({
       </div>
 
       <div className="space-y-4">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
           <Label>Distribución por tipo</Label>
-          <Button type="button" variant="outline" size="sm" onClick={distribuirAutomaticamente}>
+          <Button type="button" variant="outline" size="sm" className="min-h-11 w-full sm:w-auto" onClick={distribuirAutomaticamente}>
             Distribuir equitativamente
           </Button>
         </div>
 
         {TIPOS_PREGUNTA_IA.map((tipo) => (
-          <div key={tipo} className="flex items-center gap-4">
-            <span className="text-sm w-40 shrink-0">{ETIQUETAS_TIPO[tipo]}</span>
+          <div key={tipo} className="flex items-center gap-3 min-w-0">
+            <span className="text-sm flex-1 min-w-0 truncate">{ETIQUETAS_TIPO[tipo]}</span>
             <Input
               type="number"
               min={0}
               max={totalPreguntas}
-              className="w-20"
+              className="w-20 min-h-11 shrink-0"
               value={distribucion[tipo]}
               onChange={(e) =>
                 ajustarDistribucion(tipo, parseInt(e.target.value, 10) || 0)
@@ -130,7 +130,7 @@ export function PasoConfigurar({
       </div>
 
       <Button
-        className="btn-primary"
+        className="btn-primary min-h-11 w-full sm:w-auto"
         disabled={!tituloQuiz.trim() || !distribucionValida || generando}
         onClick={() =>
           onGenerar(tituloQuiz.trim(), {

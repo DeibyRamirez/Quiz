@@ -121,15 +121,15 @@ function StudentPageContent() {
     <div className="page-shell">
       <Navigation />
       <main className="page-main">
-        <div className="text-center mb-16">
+        <div className="text-center mb-8 sm:mb-16">
           <h1 className="heading-primary mb-4">Panel del Estudiante</h1>
-          <p className="body-text text-muted-foreground max-w-2xl mx-auto">
-            Únete a quizzes interactivos sobre fuerzas eléctricas y pon a prueba tus conocimientos ⚡
+          <p className="body-text text-muted-foreground max-w-2xl mx-auto px-1">
+            Únete a quizzes interactivos y pon a prueba tus conocimientos 
           </p>
         </div>
 
         <div className="flex items-center justify-center py-0">
-          <Card className="card-institutional w-full max-w-2xl p-8">
+          <Card className="card-institutional w-full max-w-2xl p-5 sm:p-8">
             <CardHeader>
               <CardTitle className="heading-secondary text-center">Unirse a un Quiz</CardTitle>
             </CardHeader>
@@ -162,7 +162,9 @@ function StudentPageContent() {
                 <Label htmlFor="pin" className="text-lg">Ingrese el PIN del Quiz:</Label>
                 <Input
                   id="pin"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
                   placeholder="Ej: 123456"
                   value={pin}
                   onChange={(e) => {
@@ -171,14 +173,14 @@ function StudentPageContent() {
                       setPin(input);
                     }
                   }}
-                  className="input-institutional text-center text-xl py-6 tracking-widest"
+                  className="input-institutional text-center text-base sm:text-xl min-h-11 py-3 tracking-widest"
                 />
               </div>
 
               <Button
                 onClick={() => handleJoinQuiz()}
                 disabled={loading}
-                className="btn-primary w-full text-lg py-6 font-semibold"
+                className="btn-primary w-full text-base sm:text-lg min-h-11 font-semibold"
               >
                 {loading ? "Uniendo..." : "Unirse al Quiz"}
               </Button>
