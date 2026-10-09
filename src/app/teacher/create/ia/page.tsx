@@ -5,9 +5,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Navigation } from "@/components/navigation";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import { Button } from "@/components/ui/button";
-import { RolUsuario } from "@/app/types";
 import type { ResultadoSubidaGuia } from "@/app/types/guia";
 import type { ConfigGeneracion } from "@/app/types/quiz-ia";
 import type { Pregunta } from "@/app/types/pregunta";
@@ -114,7 +112,7 @@ function CrearQuizIaContent() {
       <main className="page-main max-w-3xl mx-auto">
         <div className="mb-6">
           <Link href="/teacher/">
-            <Button variant="ghost" size="sm" className="mb-4">
+            <Button variant="ghost" size="sm" className="mb-4 min-h-11">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Volver al panel
             </Button>
@@ -125,7 +123,7 @@ function CrearQuizIaContent() {
           </p>
         </div>
 
-        <div className="flex gap-2 mb-8">
+        <div className="flex flex-wrap gap-2 mb-8">
           {pasos.map((p) => (
             <div
               key={p.id}
@@ -172,9 +170,5 @@ function CrearQuizIaContent() {
 }
 
 export default function CrearQuizIaPage() {
-  return (
-    <ProtectedRoute allowedRoles={[RolUsuario.DOCENTE, RolUsuario.ADMINISTRADOR]}>
-      <CrearQuizIaContent />
-    </ProtectedRoute>
-  );
+  return <CrearQuizIaContent />;
 }

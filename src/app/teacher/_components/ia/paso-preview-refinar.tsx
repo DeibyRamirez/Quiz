@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,21 +10,32 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import type { Pregunta } from "@/app/types/pregunta";
 import { TipoPregunta, isMultipleOpcion } from "@/app/types/pregunta";
+import { ImagenPreguntaField } from "@/app/teacher/_components/imagen-pregunta-field";
 
 function etiquetaTipo(pregunta: Pregunta): string {
-  if (pregunta.requiereCorreccionManual) return "Desarrollo";
+  if (pregunta.requiereCorreccionManual) return "Respuesta corta (legacy)";
   switch (pregunta.tipo) {
     case TipoPregunta.VERDADERO_FALSO:
-      return "V/F";
+      return "Falso/verdadero";
     case TipoPregunta.MULTIPLE_OPCION:
       return isMultipleOpcion(pregunta) && pregunta.permiteMultiples
-        ? "Multi"
-        : "Única";
+        ? "Opción múltiple"
+        : "Opción única";
     case TipoPregunta.RESPUESTA_CORTA:
-      return "Corta";
+      return "Respuesta exacta";
     default:
-      return pregunta.tipo;
+      return "Pregunta";
   }
+}
+
+function opcionesPreviewDesdePregunta(p: Pregunta): string[] | undefined {
+  if (p.tipo === TipoPregunta.VERDADERO_FALSO) {
+    return ["Verdadero", "Falso"];
+  }
+  if (isMultipleOpcion(p) && p.opciones?.length) {
+    return p.opciones;
+  }
+  return undefined;
 }
 
 interface PasoPreviewRefinarProps {
@@ -45,6 +56,32 @@ export function PasoPreviewRefinar({
   refinando,
 }: PasoPreviewRefinarProps) {
   const [instruccion, setInstruccion] = useState("");
+  const [imagenPorPregunta, setImagenPorPregunta] = useState<
+    Record<string, string | undefined>
+  >(() => {
+    const inicial: Record<string, string | undefined> = {};
+    for (const p of preguntas) {
+      if (p.id) {
+        inicial[p.id] = (p as Pregunta & { imagenReferencia?: string })
+          .imagenReferencia;
+      }
+    }
+    return inicial;
+  });
+
+  useEffect(() => {
+    setImagenPorPregunta((prev) => {
+      const next = { ...prev };
+      for (const p of preguntas) {
+        if (!p.id) continue;
+        const ref = (p as Pregunta & { imagenReferencia?: string }).imagenReferencia;
+        if (next[p.id] === undefined && ref) {
+          next[p.id] = ref;
+        }
+      }
+      return next;
+    });
+  }, [preguntas]);
 
   return (
     <div className="space-y-6">
@@ -55,20 +92,20 @@ export function PasoPreviewRefinar({
             {preguntas.length} preguntas · versión {version}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Link href={`/teacher/quiz/${quizId}/edit/`}>
-            <Button variant="outline">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Link href={`/teacher/quiz/${quizId}/edit/`} className="w-full sm:w-auto">
+            <Button variant="outline" className="min-h-11 w-full">
               Editar manualmente
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
-          <Link href="/teacher/">
-            <Button variant="secondary">Ir al panel</Button>
+          <Link href="/teacher/" className="w-full sm:w-auto">
+            <Button variant="secondary" className="min-h-11 w-full">Ir al panel</Button>
           </Link>
         </div>
       </div>
 
-      <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+      <div className="space-y-3 max-h-[min(70vh,560px)] overflow-y-auto pr-1">
         {preguntas.map((p, i) => (
           <Card key={p.id ?? i} className="card-institutional">
             <CardHeader className="py-3 px-4">
@@ -81,12 +118,22 @@ export function PasoPreviewRefinar({
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="py-2 px-4 text-sm text-muted-foreground">
-              {p.requiereCorreccionManual && (
-                <p className="mb-1 text-amber-600 dark:text-amber-400">
-                  Corrección manual — no se califica automáticamente en vivo
-                </p>
-              )}
+            <CardContent className="py-2 px-4 text-sm text-muted-foreground space-y-3">
+              {p.tipo === TipoPregunta.RESPUESTA_CORTA && (
+                  <p className="mb-1 text-primary">
+                    Respuesta esperada:{" "}
+                    <span className="font-medium text-foreground">
+                      {String(
+                        Array.isArray(p.respuestaCorrecta)
+                          ? p.respuestaCorrecta[0]
+                          : p.respuestaCorrecta ??
+                            (p as Pregunta & { criteriosEvaluacion?: string })
+                              .criteriosEvaluacion ??
+                            "—"
+                      )}
+                    </span>
+                  </p>
+                )}
               {"opciones" in p && p.opciones && p.opciones.length > 0 && (
                 <ul className="list-disc list-inside">
                   {p.opciones.map((op, j) => (
@@ -94,12 +141,29 @@ export function PasoPreviewRefinar({
                   ))}
                 </ul>
               )}
-              {p.criteriosEvaluacion && (
-                <p className="mt-1 italic">Criterios: {p.criteriosEvaluacion}</p>
+              {p.criteriosEvaluacion && p.requiereCorreccionManual && (
+                <p className="mt-1 italic text-muted-foreground">
+                  Criterio legacy (revisa y acorta en edición): {p.criteriosEvaluacion}
+                </p>
               )}
               {p.explicacion && (
                 <p className="mt-1">Explicación: {p.explicacion}</p>
               )}
+              {p.id ? (
+                <ImagenPreguntaField
+                  preguntaId={p.id}
+                  imagenReferencia={imagenPorPregunta[p.id]}
+                  textoPregunta={p.texto}
+                  opcionesPreview={opcionesPreviewDesdePregunta(p)}
+                  etiquetaTipo={etiquetaTipo(p)}
+                  onChange={(ref) => {
+                    setImagenPorPregunta((prev) => ({
+                      ...prev,
+                      [p.id!]: ref,
+                    }));
+                  }}
+                />
+              ) : null}
             </CardContent>
           </Card>
         ))}
