@@ -185,6 +185,8 @@ Apunta a `src/` — crucial para que Tailwind escanee los archivos correctos.
   }
 }
 ```
+La clave `Electro_Quiz` es el alias histórico del proyecto en Firebase; el producto actual se llama **QuimeQuiz**.
+
 Proyecto Firebase: `calculo-de-fuerzas-electricas`
 
 ### 5.4 `firebase.json`

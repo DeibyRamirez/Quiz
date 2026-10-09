@@ -10,7 +10,7 @@
 
 ```bash
 git clone <repo>
-cd Electro_Quiz
+cd Quiz
 npm install
 ```
 

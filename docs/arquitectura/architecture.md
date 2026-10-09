@@ -2,7 +2,7 @@
 
 ## Visión general
 
-Electro Quiz es una aplicación **monolito Next.js** con:
+QuimeQuiz es una aplicación **monolito Next.js** con:
 
 - **Frontend**: React Server/Client Components en `src/app`
 - **Backend**: Route Handlers en `src/app/api` (sin servidor Express separado)

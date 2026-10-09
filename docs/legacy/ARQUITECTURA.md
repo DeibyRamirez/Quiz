@@ -1,8 +1,8 @@
-# Arquitectura del Proyecto - ElectroQuiz
+# Arquitectura del Proyecto - QuimeQuiz (legacy Firebase)
 
 ## Visión General
 
-ElectroQuiz es una plataforma educativa universitaria interactiva para el aprendizaje de **Fuerzas Eléctricas** (Ley de Coulomb, Campo Eléctrico, Potencial Eléctrico). Utiliza **Next.js 14 App Router** con renderizado del lado del cliente (CSR) y se despliega como **standalone** en Firebase Hosting.
+QuimeQuiz es una plataforma educativa universitaria interactiva para el aprendizaje de **Fuerzas Eléctricas** (Ley de Coulomb, Campo Eléctrico, Potencial Eléctrico). Utiliza **Next.js 14 App Router** con renderizado del lado del cliente (CSR) y se despliega como **standalone** en Firebase Hosting.
 
 La aplicación tiene **3 roles de usuario**: `estudiante`, `docente`, `administrador`. Usa **Firebase** como backend completo: autenticación, base de datos (Firestore), tiempo real (Realtime Database), y funciones serverless (Cloud Functions).
 
@@ -35,7 +35,7 @@ La aplicación tiene **3 roles de usuario**: `estudiante`, `docente`, `administr
 ## Árbol de Directorios Completo
 
 ```
-D:\Proyectos\Electro_Quiz
+D:\Proyectos\Quiz
 ├── src/                               # Código fuente principal
 │   ├── app/                           # Next.js App Router
 │   │   ├── globals.css                # Estilos globales Tailwind v4

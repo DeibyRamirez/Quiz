@@ -32,7 +32,7 @@
 - **Archivo**: `src/components/navigation.tsx`
 - **Props**: `{ pin?: string }` (PIN opcional para limpieza al salir)
 - **Función**: Barra de navegación superior sticky con:
-  - Logo ElectroQuiz (Zap icon + texto truncable)
+  - Logo QuimeQuiz (`/Icono.png` + texto truncable)
   - Enlaces según rol (Docente/Estudiante/Administrador)
   - Avatar de Google + nombre (click → panel flotante con cerrar sesión)
 - **Seguridad**: Escucha `onAuthStateChanged`, detecta `beforeunload` y cambios de ruta para ejecutar `salirQuiz(pin)`

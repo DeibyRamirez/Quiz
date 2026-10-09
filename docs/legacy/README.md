@@ -1,6 +1,6 @@
 # Legacy — documentación era Firebase
 
-Estos documentos describen **Electro Quiz cuando usaba Firebase** (Firestore, Realtime Database, Cloud Functions). Se conservan como referencia histórica del inventario de archivos y flujos antiguos.
+Estos documentos describen **QuimeQuiz cuando usaba Firebase** (Firestore, Realtime Database, Cloud Functions). Se conservan como referencia histórica del inventario de archivos y flujos antiguos.
 
 > **No uses esta carpeta como fuente de verdad.** El sistema actual está en MongoDB + JWT + Socket.io. Ver [índice general](../README.md).
 
