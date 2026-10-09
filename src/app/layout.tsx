@@ -10,7 +10,6 @@ import { Inter, Montserrat } from "next/font/google"
 import "./globals.css"
 
 import Footer from "@/components/footer"
-import CookieBanner from "@/components/cookie-banner"
 import AdsenseLoader from "@/components/adsense-loader"
 
 
@@ -30,7 +29,7 @@ const montserrat = Montserrat({
 
 // Metadatos para SEO y redes sociales
 export const metadata: Metadata = {
-  title: "ElectroQuiz - Sistema de Fuerzas Eléctricas",
+  title: "QuimeQuiz - Sistema de Fuerzas Eléctricas",
   description: "Plataforma educativa para el aprendizaje de fuerzas eléctricas universitarias",
   generator: "v0.app",
 }
@@ -61,9 +60,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Suspense fallback={null}>{children}</Suspense>
           <Footer />
         </div>
-
-        {/* Banner cookies global */}
-        <CookieBanner />
 
         <Analytics />
         <SpeedInsights />
