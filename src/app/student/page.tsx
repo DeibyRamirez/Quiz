@@ -10,7 +10,7 @@ import { Navigation } from "@/components/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { RolUsuario } from "@/app/types";
 import { obtenerUsuarioActual } from "@/lib/client/auth";
-import { unirseSesion, salirSesion, obtenerSesion } from "@/lib/client/services/sesiones";
+import { unirseSesion, obtenerSesion } from "@/lib/client/services/sesiones";
 import type { SesionLive } from "@/app/types/sesion";
 
 function StudentPageContent() {
@@ -58,17 +58,6 @@ function StudentPageContent() {
         }
       });
   }, [usuario]);
-
-  useEffect(() => {
-    if (!usuario || !pin) return;
-
-    const handleBeforeUnload = () => {
-      salirSesion(pin).catch(console.error);
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [pin, usuario]);
 
   const handleJoinQuiz = async (pinOverride?: string) => {
     const pinToUse = pinOverride ?? pin;

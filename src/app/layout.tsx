@@ -1,6 +1,5 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
@@ -37,7 +36,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${inter.variable} ${montserrat.variable}`}>
+    <html lang="es" className={`${inter.variable} ${montserrat.variable} ${GeistMono.variable}`}>
       <head>
         <meta
           name="viewport"
@@ -46,7 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         
       </head>
 
-      <body className={`${inter.variable} ${montserrat.variable}`}>
+      <body className={`${inter.variable} ${montserrat.variable} ${GeistMono.variable}`}>
         {/* Carga AdSense SOLO si aceptan cookies */}
         <AdsenseLoader />
         <CookieBanner />

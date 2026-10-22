@@ -76,7 +76,7 @@ export default function HomePage() {
   return (
     <div className="page-shell">
       {/* Header */}
-      <header className="border-b border-boder bg-primary/5 backdrop-blur-sm">
+      <header className="border-b border-border bg-primary/5 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
