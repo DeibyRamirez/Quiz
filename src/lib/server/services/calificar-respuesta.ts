@@ -3,11 +3,13 @@ import {
   preguntaApiToUi,
   evaluarRespuestaUi,
 } from "@/lib/client/mappers/pregunta-ui";
+import { puntosPorTiempo } from "@/lib/server/services/tiempo-sesion";
 import { serializarDocumento } from "@/lib/server/utils/serializar";
 
 export function calificarRespuesta(
   preguntaDoc: Record<string, unknown> & { _id: unknown },
   answerId: string,
+  /** Segundos restantes calculados en el servidor. No usar el valor del cliente. */
   timeLeft: number
 ): {
   correct: boolean;
@@ -41,9 +43,12 @@ export function calificarRespuesta(
 
   const basePoints = ui.points || 1000;
   const timeLimit = ui.timeLimit || 30;
-  const pointsEarned = evaluacion.correct
-    ? Math.round((timeLeft / timeLimit) * basePoints)
-    : 0;
+  const pointsEarned = puntosPorTiempo(
+    evaluacion.correct,
+    timeLeft,
+    timeLimit,
+    basePoints
+  );
 
   const correctOptionId =
     ui.questionType === "numerical" ||
