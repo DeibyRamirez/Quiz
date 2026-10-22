@@ -2,8 +2,8 @@
 
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, AlertTriangle, LogOut, Hash } from "lucide-react";
+import { Sello } from "@/components/quiz/sello";
+import { Users, AlertTriangle, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { salirQuiz } from "@/lib/salirQuiz";
@@ -69,66 +69,53 @@ export default function QuizLobbyPage() {
     );
   }
 
+  const jugadores = session.players ?? [];
+
   return (
     <div className="page-shell">
       <Navigation />
       <main className="page-main">
-        <Card className="card-institutional max-w-md mx-auto">
-          <CardHeader className="text-center">
-            <CardTitle className="heading-secondary">Lobby del Quiz</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5 text-center">
-            <div>
-              <h2 className="heading-tertiary text-xl">
-                ¡Bienvenido, {playerName || "Estudiante"}!
-              </h2>
-              <p className="body-small text-muted-foreground mt-1">
-                Espera a que el docente inicie el quiz.
-              </p>
-            </div>
-
-            <div className="p-3 bg-muted rounded-md border border-border">
-              <p className="body-small font-medium text-primary flex items-center justify-center gap-2">
-                <Hash className="h-5 w-5 icono-pin-lobby" aria-hidden="true" />
-                PIN del Quiz: <span className="font-bold tracking-widest">{pin}</span>
-              </p>
-              <div className="flex items-center justify-center gap-2 mt-1 body-small text-muted-foreground">
-                <Users className="h-4 w-4 icono-usuarios-lobby" />
-                <span>{session.players?.length || 0} jugadores unidos</span>
-              </div>
-            </div>
-
-            <div className="flex justify-center items-center gap-2 body-small text-muted-foreground">
-              Estado:{" "}
-              <span className="font-semibold text-primary">
-                {session.status === "lobby" ? "Esperando" : "Iniciando..."}
+        <div className="mx-auto flex max-w-lg flex-col items-center gap-6 text-center">
+          <Sello texto="ESPERANDO AL DOCENTE" />
+          <p className="qq-sticker">{playerName || "Estudiante"}</p>
+          <h1 className="heading-secondary">Sala de espera</h1>
+          <p className="body-text">
+            El quiz arranca cuando el docente pulse Empezar. PIN{" "}
+            <span className="font-mono font-bold tracking-widest">{pin}</span>
+          </p>
+          <p className="qq-label">
+            <Users className="mr-1 inline h-4 w-4" aria-hidden />
+            {jugadores.length} {jugadores.length === 1 ? "jugador" : "jugadores"}
+          </p>
+          <ul className="flex flex-wrap justify-center gap-2" aria-label="Jugadores en la sala">
+            {jugadores.map((jugador) => (
+              <li key={jugador.userId} className="qq-chip">
+                {jugador.nombre}
+              </li>
+            ))}
+          </ul>
+          <div className="qq-card-brutal w-full p-4 text-left">
+            <p className="flex items-start gap-3 text-base">
+              <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 text-foreground" aria-hidden />
+              <span>
+                Si entraste por error, sal ahora. Si te quedas, tu nombre queda en la lista de
+                quienes presentan la actividad.
               </span>
-            </div>
-
-            <div className="p-4 bg-accent/10 border border-accent/30 rounded-xl text-foreground flex items-start gap-3">
-              <AlertTriangle className="h-6 w-6 shrink-0 text-secondary mt-1" />
-              <p className="body-small text-left">
-                Si ingresaste por error o no perteneces a esta sesión,
-                <strong> sal del quiz ahora </strong>.
-                De lo contrario, <span className="font-semibold"> tu nombre quedará registrado </span>
-                en la lista de estudiantes que presentarán la actividad.
-              </p>
-            </div>
-
-            <Button
-              variant="destructive"
-              size="lg"
-              className="w-full min-h-11 flex items-center justify-center gap-2 font-semibold"
-              onClick={async () => {
-                await salirQuiz(pin);
-                router.push("/student");
-              }}
-            >
-              <LogOut className="h-5 w-5" />
-              Salir del Quiz
-            </Button>
-          </CardContent>
-        </Card>
+            </p>
+          </div>
+          <Button
+            variant="destructive"
+            size="lg"
+            className="flex min-h-11 w-full items-center justify-center gap-2 font-semibold"
+            onClick={async () => {
+              await salirQuiz(pin);
+              router.push("/student");
+            }}
+          >
+            <LogOut className="h-5 w-5" />
+            Salir del Quiz
+          </Button>
+        </div>
       </main>
     </div>
   );

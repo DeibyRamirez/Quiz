@@ -45,7 +45,7 @@ export function LiveLeaderboard({ students, isLive = false }: LiveLeaderboardPro
   const getPositionIcon = (position: number) => {
     switch (position) {
       case 1:
-        return <Trophy className="h-5 w-5 text-yellow-500" />
+        return <Trophy className="h-5 w-5 text-foreground" />
       case 2:
         return <Medal className="h-5 w-5 text-gray-400" />
       case 3:
@@ -86,11 +86,11 @@ export function LiveLeaderboard({ students, isLive = false }: LiveLeaderboardPro
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-yellow-500" />
+          <Trophy className="h-5 w-5 text-foreground" />
           Leaderboard en Vivo
           {isLive && (
-            <Badge variant="default" className="animate-pulse">
-              LIVE
+            <Badge variant="default">
+              EN VIVO
             </Badge>
           )}
         </CardTitle>
@@ -108,7 +108,7 @@ export function LiveLeaderboard({ students, isLive = false }: LiveLeaderboardPro
                 <div
                   key={student.id}
                   className={`flex items-center gap-3 p-3 border rounded-lg transition-all duration-500 ${
-                    position <= 3 ? "bg-gradient-to-r from-yellow-50 to-transparent border-yellow-200" : ""
+                    position <= 3 ? "border-[var(--qq-line)] bg-[var(--qq-paper)]" : ""
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -136,8 +136,8 @@ export function LiveLeaderboard({ students, isLive = false }: LiveLeaderboardPro
                       </div>
                       {student.streak > 1 && (
                         <div className="flex items-center gap-1 text-xs">
-                          <Zap className="h-3 w-3 text-orange-500" />
-                          <span className="text-orange-600 font-medium">{student.streak}x racha</span>
+                          <Zap className="h-3 w-3 text-foreground" />
+                          <span className="font-medium text-foreground">{student.streak}x racha</span>
                         </div>
                       )}
                       <div className="text-xs text-muted-foreground">Tiempo: {student.averageTime}s</div>

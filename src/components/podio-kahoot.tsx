@@ -49,6 +49,37 @@ function AvatarIniciales({
   );
 }
 
+function BloquePodio({
+  entrada,
+  puesto,
+  clase,
+  icono,
+}: {
+  entrada?: EntradaPodio;
+  puesto: string;
+  clase: string;
+  icono: "trofeo" | "medalla";
+}) {
+  if (!entrada) return <div className="w-24 sm:w-32" aria-hidden />;
+  return (
+    <div
+      className={`qq-podio-bloque w-24 sm:w-36 ${clase}${entrada.destacado ? " ring-4 ring-[var(--qq-ink)]" : ""}`}
+    >
+      {icono === "trofeo" ? (
+        <Trophy className="mb-1 h-6 w-6" aria-hidden />
+      ) : (
+        <Medal className="mb-1 h-5 w-5" aria-hidden />
+      )}
+      <p className="text-sm font-black">{puesto}</p>
+      <p className="max-w-full truncate text-sm font-bold" title={entrada.nombre}>
+        {entrada.nombre}
+      </p>
+      {entrada.destacado ? <p className="text-xs font-black uppercase">Tú</p> : null}
+      <p className="tabular-nums font-bold">{entrada.puntos}</p>
+    </div>
+  );
+}
+
 interface PodioKahootProps {
   ranking: EntradaPodio[];
   titulo?: string;
@@ -67,52 +98,10 @@ export function PodioKahoot({ ranking, titulo = "Podio" }: PodioKahootProps) {
     <section className="podio-kahoot" aria-label={titulo}>
       <h2 className="podio-kahoot-titulo">{titulo}</h2>
 
-      <div className="podio-kahoot-top3">
-        <div className="podio-kahoot-puesto podio-kahoot-segundo">
-          {segundo ? (
-            <>
-              <AvatarIniciales nombre={segundo.nombre} tamano="md" tono="navy" />
-              <Medal className="podio-kahoot-medalla text-primary" aria-hidden="true" />
-              <p className="podio-kahoot-puesto-num">2°</p>
-              <p className="podio-kahoot-nombre" title={segundo.nombre}>
-                {segundo.nombre}
-              </p>
-              <p className="podio-kahoot-puntos">{segundo.puntos} pts</p>
-            </>
-          ) : null}
-        </div>
-
-        <div className="podio-kahoot-puesto podio-kahoot-primero">
-          {primero ? (
-            <>
-              <Trophy className="icono-trofeo-podio text-accent" aria-hidden="true" />
-              <AvatarIniciales nombre={primero.nombre} tamano="lg" tono="oro" />
-              <p className="podio-kahoot-puesto-num">1°</p>
-              <p className="podio-kahoot-nombre" title={primero.nombre}>
-                {primero.nombre}
-              </p>
-              <p className="podio-kahoot-puntos">{primero.puntos} pts</p>
-            </>
-          ) : null}
-        </div>
-
-        <div className="podio-kahoot-puesto podio-kahoot-tercero">
-          {tercero ? (
-            <>
-              <AvatarIniciales
-                nombre={tercero.nombre}
-                tamano="md"
-                tono="naranja"
-              />
-              <Medal className="podio-kahoot-medalla text-secondary" aria-hidden="true" />
-              <p className="podio-kahoot-puesto-num">3°</p>
-              <p className="podio-kahoot-nombre" title={tercero.nombre}>
-                {tercero.nombre}
-              </p>
-              <p className="podio-kahoot-puntos">{tercero.puntos} pts</p>
-            </>
-          ) : null}
-        </div>
+      <div className="mt-6 flex items-end justify-center gap-2 sm:gap-3">
+        <BloquePodio entrada={segundo} puesto="2°" clase="qq-podio-2" icono="medalla" />
+        <BloquePodio entrada={primero} puesto="1°" clase="qq-podio-1" icono="trofeo" />
+        <BloquePodio entrada={tercero} puesto="3°" clase="qq-podio-3" icono="medalla" />
       </div>
 
       {resto.length > 0 ? (

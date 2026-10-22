@@ -214,7 +214,7 @@ function DashboardAdministradorContent() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleVerificar(user.id)}
-                                className="border-secondary text-secondary hover:bg-secondary hover:text-secondary-foreground"
+                                className="border-foreground text-foreground hover:bg-foreground hover:text-background"
                               >
                                 <CheckCircle className="h-4 w-4 mr-1" />
                                 Verificar

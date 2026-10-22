@@ -359,7 +359,7 @@ export default function LiveQuizPage() {
                   Empezar Quiz
                 </Button>
                 {!canStartQuiz && (
-                  <p className="text-sm text-orange-600 text-center">
+                  <p className="text-center text-sm font-semibold text-foreground">
                     {players.length === 0 ? "Espera a un jugador" : "Ingresa un nombre"}
                   </p>
                 )}
@@ -390,6 +390,7 @@ export default function LiveQuizPage() {
               formatted={formatted}
               timeLeft={timeLeft}
               progress={progress}
+              anillo
               etiqueta={
                 preguntaActual
                   ? etiquetaTipoPreguntaPlay(preguntaActual)

@@ -103,46 +103,65 @@ export function preguntaApiToUi(p: Pregunta): QuestionUi {
   };
 
   if (p.tipo === TipoPregunta.MULTIPLE_OPCION) {
-    const correctIndices = Array.isArray(p.respuestaCorrecta)
-      ? p.respuestaCorrecta
-      : [p.respuestaCorrecta];
-    const firstCorrect = correctIndices[0] ?? 0;
+    const claveConocida =
+      p.respuestaCorrecta !== undefined && p.respuestaCorrecta !== null;
+    const correctIndices = !claveConocida
+      ? []
+      : Array.isArray(p.respuestaCorrecta)
+        ? p.respuestaCorrecta
+        : [p.respuestaCorrecta];
+    const firstCorrect = correctIndices[0];
     return {
       ...base,
       questionType: "multiple-choice",
-      permiteMultiples: p.permiteMultiples,
+      permiteMultiples: Boolean(p.permiteMultiples),
       options: p.opciones.map((text, i) => ({
         id: String(i),
         text,
-        isCorrect: correctIndices.includes(i),
+        isCorrect: claveConocida && correctIndices.includes(i),
       })),
-      correctOption: String(firstCorrect),
+      ...(claveConocida && firstCorrect !== undefined
+        ? { correctOption: String(firstCorrect) }
+        : {}),
     };
   }
 
   if (p.tipo === TipoPregunta.VERDADERO_FALSO) {
+    const claveConocida = typeof p.respuestaCorrecta === "boolean";
     return {
       ...base,
       questionType: "true-false",
       options: [
-        { id: "true", text: "Verdadero", isCorrect: p.respuestaCorrecta === true },
-        { id: "false", text: "Falso", isCorrect: p.respuestaCorrecta === false },
+        {
+          id: "true",
+          text: "Verdadero",
+          isCorrect: claveConocida && p.respuestaCorrecta === true,
+        },
+        {
+          id: "false",
+          text: "Falso",
+          isCorrect: claveConocida && p.respuestaCorrecta === false,
+        },
       ],
-      correctOption: p.respuestaCorrecta ? "true" : "false",
+      ...(claveConocida
+        ? { correctOption: p.respuestaCorrecta ? "true" : "false" }
+        : {}),
     };
   }
 
   if (p.requiereCorreccionManual || (p.criteriosEvaluacion && p.criteriosEvaluacion.trim())) {
+    const desdeClave = Array.isArray(p.respuestaCorrecta)
+      ? p.respuestaCorrecta[0]
+      : p.respuestaCorrecta;
     const legacyAnswer =
-      String(
-        Array.isArray(p.respuestaCorrecta)
-          ? p.respuestaCorrecta[0]
-          : p.respuestaCorrecta ?? ""
+      (desdeClave === undefined || desdeClave === null
+        ? ""
+        : String(desdeClave)
       ).trim() || (p.criteriosEvaluacion ?? "").trim();
     return {
       ...base,
       questionType: "exact-text",
-      exactAnswerText: legacyAnswer,
+      ...(legacyAnswer ? { exactAnswerText: legacyAnswer } : {}),
     };
   }
 
@@ -152,12 +171,14 @@ export function preguntaApiToUi(p: Pregunta): QuestionUi {
         ? p.respuestaCorrecta[0]
         : p.respuestaCorrecta;
 
+    const claveConocida = raw !== undefined && raw !== null && String(raw).trim() !== "";
+
     if (unit) {
-      const numeric = parseFloat(raw);
+      const numeric = claveConocida ? parseFloat(String(raw)) : Number.NaN;
       return {
         ...base,
         questionType: "numerical",
-        correctValue: Number.isNaN(numeric) ? 0 : numeric,
+        ...(claveConocida && !Number.isNaN(numeric) ? { correctValue: numeric } : {}),
         unit,
       };
     }
@@ -165,7 +186,7 @@ export function preguntaApiToUi(p: Pregunta): QuestionUi {
     return {
       ...base,
       questionType: "exact-text",
-      exactAnswerText: raw,
+      ...(claveConocida ? { exactAnswerText: String(raw) } : {}),
     };
   }
 

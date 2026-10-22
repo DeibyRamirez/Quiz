@@ -12,6 +12,8 @@ const RespuestaSchema = new Schema(
     timeLeft: { type: Number, default: 0 },
     pointsEarned: { type: Number, default: 0 },
     questionIndex: { type: Number, default: 0 },
+    respuestaRevelada: { type: String, default: "" },
+    opcionesCorrectas: { type: [String], default: undefined },
   },
   { _id: false }
 );

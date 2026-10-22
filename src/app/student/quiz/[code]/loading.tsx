@@ -1,10 +1,10 @@
 export default function Loading() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-200">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-[var(--qq-bg)] text-[var(--qq-ink)]">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>
-        <p className="text-muted-foreground">Uniendo al quiz...</p>
+        <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-2 border-[var(--qq-line)] border-t-[var(--qq-orange)]" />
+        <p>Uniendo al quiz...</p>
       </div>
     </div>
-  )
+  );
 }

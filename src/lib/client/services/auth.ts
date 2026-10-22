@@ -87,9 +87,15 @@ export async function cerrarSesion(): Promise<void> {
   }
 }
 
-export function redirigirPorRol(rol: RolUsuario, router: { push: (path: string) => void }) {
-  if (rol === "estudiante") router.push("/student");
-  else if (rol === "admin") router.push("/administrador");
+export function redirigirPorRol(
+  rol: RolUsuario,
+  router: { push: (path: string) => void },
+  pin?: string | null
+) {
+  const pinValido = pin && /^\d{6}$/.test(pin) ? pin : null;
+  if (rol === "estudiante") {
+    router.push(pinValido ? `/student?pin=${pinValido}` : "/student");
+  } else if (rol === "admin") router.push("/administrador");
   else if (rol === "docente") router.push("/teacher");
-  else router.push("/student");
+  else router.push(pinValido ? `/student?pin=${pinValido}` : "/student");
 }

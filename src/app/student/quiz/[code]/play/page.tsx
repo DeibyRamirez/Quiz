@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { toast } from "sonner";
+import { ApiError } from "@/lib/client/api";
 import { obtenerUsuarioActual } from "@/lib/client/auth";
 import { listarPreguntas } from "@/lib/client/services/preguntas";
 import {
@@ -18,20 +19,28 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BarraTiempoSesion } from "@/components/barra-tiempo-sesion";
+import { TimerPill } from "@/components/barra-tiempo-sesion";
 import { ImagenReferenciaPregunta } from "@/components/imagen-referencia-pregunta";
 import { TableroOpciones } from "@/components/tablero-opciones";
+import { BarraProgreso } from "@/components/quiz/barra-progreso";
+import { ChipPuntaje } from "@/components/quiz/chip-puntaje";
+import { DespertarServidor } from "@/components/quiz/despertar-servidor";
+import { EstadoTiempoAgotado } from "@/components/quiz/estado-tiempo-agotado";
+import { FeedbackCard } from "@/components/quiz/feedback-card";
 import { useSesionLive } from "@/hooks/useSesionLive";
 import { useSesionTimer } from "@/hooks/useSesionTimer";
 
-function pistaCantidadOpcionMultiple(cantidad: number): string {
-  if (cantidad === 1) {
-    return "Selecciona 1 respuesta correcta.";
+const PISTA_OPCION_MULTIPLE =
+  "Puedes marcar varias opciones. Pulsa Listo cuando termines.";
+
+function calcularRacha(historial: Array<boolean | null>, index: number, correcta: boolean) {
+  if (!correcta) return 0;
+  let racha = 1;
+  for (let i = index - 1; i >= 0; i -= 1) {
+    if (historial[i] === true) racha += 1;
+    else break;
   }
-  if (cantidad >= 2) {
-    return `Hay ${cantidad} respuestas correctas. Selecciónalas todas antes de pulsar Listo.`;
-  }
-  return "Puedes marcar varias opciones. Pulsa Listo cuando termines.";
+  return racha;
 }
 
 export default function StudentPlayPage() {
@@ -39,7 +48,13 @@ export default function StudentPlayPage() {
   const pin = params.code as string;
   const router = useRouter();
 
-  const { sesion: session, serverOffsetMs } = useSesionLive(pin, { heartbeat: true });
+  const {
+    sesion: session,
+    serverOffsetMs,
+    error: errorSesion,
+    loading: cargandoSesion,
+    refresh: recargarSesion,
+  } = useSesionLive(pin, { heartbeat: true });
   const [questions, setQuestions] = useState<QuestionUi[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<QuestionUi | null>(null);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -54,6 +69,15 @@ export default function StudentPlayPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [totalScore, setTotalScore] = useState(0);
   const [frozenTimeLeft, setFrozenTimeLeft] = useState<number | null>(null);
+  const [errorCarga, setErrorCarga] = useState<string | null>(null);
+  const [reintentoCarga, setReintentoCarga] = useState(0);
+  const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
+  const [puntosGanados, setPuntosGanados] = useState(0);
+  const [respuestaRevelada, setRespuestaRevelada] = useState("");
+  const [idsCorrectos, setIdsCorrectos] = useState<string[]>([]);
+  const [racha, setRacha] = useState(0);
+  const [historial, setHistorial] = useState<Array<boolean | null>>([]);
+  const [lento, setLento] = useState(false);
 
   const isInitializedRef = useRef(false);
   const progresoLoadedRef = useRef(false);
@@ -84,16 +108,6 @@ export default function StudentPlayPage() {
     currentQuestion?.questionType === "multiple-choice" &&
     Boolean(currentQuestion?.permiteMultiples);
 
-  const cantidadCorrectas = useMemo(() => {
-    if (!esOpcionMultiple || !currentQuestion?.options) return 0;
-    return currentQuestion.options.filter((o) => o.isCorrect).length;
-  }, [esOpcionMultiple, currentQuestion?.id, currentQuestion?.options]);
-
-  const textoPistaMultiple = useMemo(() => {
-    if (!esOpcionMultiple) return null;
-    return pistaCantidadOpcionMultiple(cantidadCorrectas);
-  }, [esOpcionMultiple, cantidadCorrectas]);
-
   useEffect(() => {
     if (!pin) return;
     unirseSesion(pin).catch(() => {});
@@ -122,10 +136,31 @@ export default function StudentPlayPage() {
 
   useEffect(() => {
     if (!session?.quizId) return;
-    listarPreguntas(session.quizId).then((data) => {
-      setQuestions(data.map(preguntaApiToUi));
-    });
-  }, [session?.quizId]);
+    let cancelado = false;
+    setErrorCarga(null);
+    listarPreguntas(session.quizId)
+      .then((data) => {
+        if (cancelado) return;
+        if (data.length === 0) {
+          setQuestions([]);
+          setErrorCarga("Este quiz no tiene preguntas activas.");
+          return;
+        }
+        setQuestions(data.map(preguntaApiToUi));
+      })
+      .catch((error) => {
+        if (cancelado) return;
+        setQuestions([]);
+        setErrorCarga(
+          error instanceof Error
+            ? error.message
+            : "No pudimos cargar las preguntas."
+        );
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [session?.quizId, reintentoCarga]);
 
   useEffect(() => {
     if (!pin || progresoLoadedRef.current) return;
@@ -161,8 +196,17 @@ export default function StudentPlayPage() {
       setIsCorrect(null);
       setSimilitud(null);
       setFrozenTimeLeft(null);
+      setPuntosGanados(0);
+      setRespuestaRevelada("");
+      setIdsCorrectos([]);
+      setRacha(0);
 
       obtenerProgresoSesion(pin).then((progreso) => {
+        const marcas: Array<boolean | null> = [];
+        for (const respuesta of progreso.answers) {
+          marcas[respuesta.questionIndex] = respuesta.correct;
+        }
+        setHistorial(marcas);
         const prev = progreso.currentQuestionAnswer;
         if (prev && prev.questionIndex === index) {
           setAnswered(true);
@@ -181,6 +225,10 @@ export default function StudentPlayPage() {
           setIsCorrect(prev.correct);
           setTotalScore(progreso.totalScore);
           setFrozenTimeLeft(prev.timeLeft);
+          setPuntosGanados(prev.pointsEarned ?? 0);
+          setRespuestaRevelada(prev.respuestaRevelada ?? "");
+          setIdsCorrectos(prev.opcionesCorrectas ?? []);
+          setRacha(calcularRacha(marcas, index, prev.correct));
         }
       }).catch(() => {});
     }
@@ -226,6 +274,7 @@ export default function StudentPlayPage() {
     if (!answerId) return;
 
     setSubmitting(true);
+    setErrorEnvio(null);
     setFrozenTimeLeft(timeLeft);
 
     const { answerId: normalizedId, answerText } = buildAnswerPayload(
@@ -251,6 +300,15 @@ export default function StudentPlayPage() {
 
       setIsCorrect(result.correct);
       setTotalScore(result.totalScore);
+      setPuntosGanados(result.pointsEarned);
+      setRespuestaRevelada(result.respuestaRevelada ?? "");
+      setIdsCorrectos(result.opcionesCorrectas ?? []);
+      setHistorial((prev) => {
+        const siguiente = [...prev];
+        siguiente[currentQuestionIndex] = result.correct;
+        setRacha(calcularRacha(siguiente, currentQuestionIndex, result.correct));
+        return siguiente;
+      });
       setSimilitud(
         typeof result.similitud === "number" ? result.similitud : null
       );
@@ -258,11 +316,31 @@ export default function StudentPlayPage() {
     } catch (error) {
       console.error("Error al guardar respuesta:", error);
       setFrozenTimeLeft(null);
-      if (currentQuestion.permiteMultiples) {
-        setSelectedIds([]);
-      } else {
-        setSelectedOption(null);
+      const mensaje =
+        error instanceof Error
+          ? error.message
+          : "No pudimos enviar tu respuesta.";
+      if (error instanceof ApiError && error.status === 409) {
+        try {
+          const progreso = await obtenerProgresoSesion(pin);
+          const previa = progreso.currentQuestionAnswer;
+          if (previa && previa.questionIndex === currentQuestionIndex) {
+            setAnswered(true);
+            setIsCorrect(previa.correct);
+            setTotalScore(progreso.totalScore);
+            setFrozenTimeLeft(previa.timeLeft);
+            setPuntosGanados(previa.pointsEarned ?? 0);
+            setRespuestaRevelada(previa.respuestaRevelada ?? "");
+            setIdsCorrectos(previa.opcionesCorrectas ?? []);
+            setErrorEnvio(null);
+            return;
+          }
+        } catch {
+          /* se muestra el mensaje de abajo */
+        }
       }
+      setErrorEnvio(mensaje);
+      toast.error(mensaje);
     } finally {
       setSubmitting(false);
     }
@@ -300,12 +378,50 @@ export default function StudentPlayPage() {
   ]);
 
   useEffect(() => {
+    if (errorCarga) {
+      setLoading(false);
+      return;
+    }
     if (session && questions.length > 0 && currentQuestion) {
       setLoading(false);
     }
-  }, [session, questions, currentQuestion]);
+  }, [session, questions, currentQuestion, errorCarga]);
+
+  useEffect(() => {
+    if (!loading) {
+      setLento(false);
+      return;
+    }
+    const id = window.setTimeout(() => setLento(true), 700);
+    return () => window.clearTimeout(id);
+  }, [loading]);
+
+  const falloSesion = !cargandoSesion && !session && Boolean(errorSesion);
+
+  if (errorCarga || falloSesion) {
+    return (
+      <div className="page-shell flex items-center justify-center min-h-screen min-h-[100dvh] px-4">
+        <div className="max-w-md text-center" role="alert">
+          <p className="body-text font-semibold">No pudimos cargar el quiz</p>
+          <p className="text-error mt-2">{errorCarga || errorSesion}</p>
+          <Button
+            className="btn-primary mt-4 min-h-11"
+            onClick={() => {
+              setLoading(true);
+              setErrorCarga(null);
+              setReintentoCarga((n) => n + 1);
+              recargarSesion();
+            }}
+          >
+            Reintentar
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading || !session || !currentQuestion) {
+    if (lento) return <DespertarServidor />;
     return (
       <div className="page-shell flex items-center justify-center min-h-screen min-h-[100dvh]">
         <p className="body-text text-muted-foreground">Cargando quiz...</p>
@@ -313,18 +429,38 @@ export default function StudentPlayPage() {
     );
   }
 
-  const porcentajeSimilitud =
-    similitud !== null ? Math.round(similitud * 100) : null;
+  const tiempoAgotado =
+    session.status === "active" &&
+    displayTimeLeft <= 0 &&
+    !answered &&
+    !submitting &&
+    !(esOpcionMultiple && selectedIds.length > 0);
+  const bloqueado = answered || submitting || tiempoAgotado;
 
   return (
     <div className="page-shell quiz-play-shell">
       <main className="quiz-play-main">
-        <BarraTiempoSesion
-          formatted={displayFormatted}
-          timeLeft={displayTimeLeft}
-          progress={displayProgress}
-          etiqueta={`Pregunta ${currentQuestionIndex + 1} de ${questions.length}`}
-        />
+        <div className="qq-play-top">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="qq-label">
+              Pregunta {currentQuestionIndex + 1} de {questions.length}
+            </p>
+            <ChipPuntaje total={totalScore} />
+          </div>
+          <BarraProgreso
+            total={questions.length}
+            actual={currentQuestionIndex}
+            resultados={historial}
+          />
+          <div className="mt-3">
+            <TimerPill
+              formatted={displayFormatted}
+              timeLeft={displayTimeLeft}
+              progress={displayProgress}
+              etiqueta={`Pregunta ${currentQuestionIndex + 1}`}
+            />
+          </div>
+        </div>
 
         <div className="quiz-play-tablero">
           <section className="quiz-play-pregunta">
@@ -332,9 +468,9 @@ export default function StudentPlayPage() {
               {etiquetaTipoPreguntaPlay(currentQuestion)}
             </Badge>
             <p className="quiz-play-pregunta-kicker">Responde a continuación</p>
-            {esOpcionMultiple && cantidadCorrectas > 0 && textoPistaMultiple ? (
-              <p className="text-sm font-medium text-primary mb-2">
-                {textoPistaMultiple}
+            {esOpcionMultiple ? (
+              <p className="mb-2 text-sm font-medium text-foreground">
+                {PISTA_OPCION_MULTIPLE}
               </p>
             ) : null}
             <h2 className="question-text quiz-play-enunciado whitespace-pre-wrap break-words">
@@ -351,15 +487,15 @@ export default function StudentPlayPage() {
                 <Input
                   type="text"
                   inputMode="text"
-                  className="input-institutional w-full min-h-11 text-base bg-white text-black placeholder:text-neutral-500"
-                  disabled={answered || submitting}
+                  className="input-institutional w-full min-h-11 bg-white text-base text-black placeholder:text-neutral-500"
+                  disabled={bloqueado}
                   value={selectedOption ?? ""}
                   onChange={(e) => setSelectedOption(e.target.value)}
                   placeholder="Palabra, número o código (ej. 5, Software , derecho)"
                 />
                 <Button
                   className="btn-primary w-full min-h-11 text-base"
-                  disabled={answered || submitting || !selectedOption?.trim()}
+                  disabled={bloqueado || !selectedOption?.trim()}
                   onClick={() => sendAnswer()}
                 >
                   Enviar respuesta
@@ -372,7 +508,9 @@ export default function StudentPlayPage() {
                   modoMultiple={esOpcionMultiple}
                   seleccionada={esOpcionMultiple ? null : selectedOption}
                   seleccionadas={esOpcionMultiple ? selectedIds : []}
-                  deshabilitado={answered || submitting}
+                  deshabilitado={bloqueado}
+                  revelar={answered}
+                  idsCorrectos={idsCorrectos}
                   onSeleccionar={(id) => {
                     if (esOpcionMultiple) {
                       toggleOpcionMultiple(id);
@@ -384,20 +522,15 @@ export default function StudentPlayPage() {
                 />
                 {esOpcionMultiple ? (
                   <>
-                    <p className="text-sm text-muted-foreground text-center sm:text-left">
-                      {textoPistaMultiple ??
-                        "Puedes marcar varias opciones. Pulsa Listo cuando termines."}
+                    <p className="text-center text-sm text-foreground sm:text-left">
+                      {PISTA_OPCION_MULTIPLE}
                     </p>
-                    {cantidadCorrectas > 0 ? (
-                      <p className="text-sm font-medium text-center sm:text-left">
-                        Seleccionadas: {selectedIds.length} de {cantidadCorrectas}
-                      </p>
-                    ) : null}
+                    <p className="text-center text-sm font-medium sm:text-left">
+                      Seleccionadas: {selectedIds.length}
+                    </p>
                     <Button
                       className="btn-primary w-full min-h-11 text-base"
-                      disabled={
-                        answered || submitting || selectedIds.length === 0
-                      }
+                      disabled={bloqueado || selectedIds.length === 0}
                       onClick={() => sendAnswer()}
                     >
                       Listo
@@ -409,45 +542,30 @@ export default function StudentPlayPage() {
           </section>
         </div>
 
+        {errorEnvio && (
+          <div className="quiz-play-feedback" role="alert">
+            <p className="text-error">{errorEnvio}</p>
+          </div>
+        )}
+
         {submitting && (
           <div className="quiz-play-feedback">
             <p className="body-small text-muted-foreground">Verificando respuesta...</p>
           </div>
         )}
 
-        {answered && isCorrect !== null && (
-          <div
-            className={`quiz-play-feedback ${
-              isCorrect ? "quiz-play-feedback-ok" : "quiz-play-feedback-error"
-            }`}
-          >
-            {isCorrect ? (
-              <CheckCircle2 className="icono-acierto h-10 w-10 text-success mx-auto" />
-            ) : (
-              <XCircle className="icono-error h-10 w-10 text-error mx-auto" />
-            )}
-            <p className="body-small text-muted-foreground mt-2">
-              Puntaje total:{" "}
-              <span className="font-bold text-lg text-primary">{totalScore}</span> puntos
-            </p>
-            <p
-              className={`text-xl sm:text-2xl font-semibold ${
-                isCorrect ? "text-success" : "text-error"
-              }`}
-            >
-              {isCorrect ? "¡Respuesta correcta!" : "¡Respuesta incorrecta!"}
-            </p>
-            {porcentajeSimilitud !== null && (
-              <p className="text-sm sm:text-base font-medium mt-1">
-                Parecido al {porcentajeSimilitud}% —{" "}
-                {isCorrect ? "válida" : "no válida"}
-              </p>
-            )}
-            <p className="text-xs text-muted-foreground mt-1">
-              Espera a que el docente avance a la siguiente pregunta
-            </p>
-          </div>
-        )}
+        {tiempoAgotado ? <EstadoTiempoAgotado /> : null}
+
+        {answered && isCorrect !== null ? (
+          <FeedbackCard
+            correcta={isCorrect}
+            puntos={puntosGanados}
+            total={totalScore}
+            respuesta={respuestaRevelada}
+            racha={racha}
+            similitud={similitud}
+          />
+        ) : null}
       </main>
     </div>
   );

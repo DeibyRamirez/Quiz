@@ -1,25 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Navigation } from "@/components/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { PinOtp } from "@/components/quiz/pin-otp";
 import { RolUsuario } from "@/app/types";
 import { obtenerUsuarioActual } from "@/lib/client/auth";
-import { unirseSesion, salirSesion, obtenerSesion } from "@/lib/client/services/sesiones";
+import { unirseSesion, obtenerSesion } from "@/lib/client/services/sesiones";
 import type { SesionLive } from "@/app/types/sesion";
 
 function StudentPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [usuario, setUsuario] = useState<Awaited<ReturnType<typeof obtenerUsuarioActual>>>(null);
   const [sesionPendiente, setSesionPendiente] = useState<SesionLive | null>(null);
+  const autoUnido = useRef(false);
+  const enviando = useRef(false);
 
   useEffect(() => {
     obtenerUsuarioActual().then(setUsuario);
@@ -59,18 +62,9 @@ function StudentPageContent() {
       });
   }, [usuario]);
 
-  useEffect(() => {
-    if (!usuario || !pin) return;
-
-    const handleBeforeUnload = () => {
-      salirSesion(pin).catch(console.error);
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [pin, usuario]);
-
   const handleJoinQuiz = async (pinOverride?: string) => {
+    if (enviando.current) return;
+    enviando.current = true;
     const pinToUse = pinOverride ?? pin;
     setLoading(true);
     setError("");
@@ -113,9 +107,35 @@ function StudentPageContent() {
         e instanceof Error ? e.message : "Error al unirse al quiz. Verifica el PIN o intenta de nuevo."
       );
     } finally {
+      enviando.current = false;
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!usuario || usuario.rol !== RolUsuario.ESTUDIANTE || autoUnido.current) return;
+    const desdeUrl = searchParams.get("pin") ?? "";
+    let guardado = "";
+    try {
+      guardado = sessionStorage.getItem("qq_pin") ?? "";
+    } catch {
+      /* ignore */
+    }
+    const candidato = /^\d{6}$/.test(desdeUrl)
+      ? desdeUrl
+      : /^\d{6}$/.test(guardado)
+        ? guardado
+        : "";
+    if (!candidato) return;
+    autoUnido.current = true;
+    try {
+      sessionStorage.removeItem("qq_pin");
+    } catch {
+      /* ignore */
+    }
+    setPin(candidato);
+    void handleJoinQuiz(candidato);
+  }, [usuario, searchParams, handleJoinQuiz]);
 
   return (
     <div className="page-shell">
@@ -160,20 +180,14 @@ function StudentPageContent() {
 
               <div className="space-y-3">
                 <Label htmlFor="pin" className="text-lg">Ingrese el PIN del Quiz:</Label>
-                <Input
+                <PinOtp
                   id="pin"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  placeholder="Ej: 123456"
                   value={pin}
-                  onChange={(e) => {
-                    const input = e.target.value;
-                    if (/^\d*$/.test(input) && input.length <= 6) {
-                      setPin(input);
-                    }
+                  disabled={loading}
+                  onChange={setPin}
+                  onComplete={(valor) => {
+                    if (!loading) void handleJoinQuiz(valor);
                   }}
-                  className="input-institutional text-center text-base sm:text-xl min-h-11 py-3 tracking-widest"
                 />
               </div>
 
@@ -185,7 +199,11 @@ function StudentPageContent() {
                 {loading ? "Uniendo..." : "Unirse al Quiz"}
               </Button>
 
-              {error && <p className="text-error text-center font-medium mt-2">{error}</p>}
+              {error ? (
+                <p className="text-error mt-2 text-center font-medium" role="alert">
+                  {error}
+                </p>
+              ) : null}
             </CardContent>
           </Card>
         </div>

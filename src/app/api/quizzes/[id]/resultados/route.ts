@@ -3,6 +3,11 @@ import type { ResultadosQuiz } from "@/app/types/sesion";
 import { conectarDB } from "@/lib/server/database";
 import { ParticipanteSesionModel } from "@/lib/server/models/ParticipanteSesion";
 import { SesionLiveModel } from "@/lib/server/models/SesionLive";
+import { obtenerPayloadSesion } from "@/lib/server/auth/session";
+import {
+  lectorPuedeVerRespuestas,
+  serializarRespuestaParticipante,
+} from "@/lib/server/services/visibilidad-pregunta";
 import { manejarErrorApi, respuestaError } from "@/lib/server/utils/api-response";
 
 type Params = { params: { id: string } };
@@ -14,6 +19,9 @@ export async function GET(_request: Request, { params }: Params) {
     const sesiones = await SesionLiveModel.find({ quizId: params.id })
       .select("pin sessionName")
       .lean();
+
+    const payload = await obtenerPayloadSesion();
+    const puedeVerClave = await lectorPuedeVerRespuestas(params.id);
 
     const participantes = await ParticipanteSesionModel.find({
       quizId: params.id,
@@ -54,18 +62,12 @@ export async function GET(_request: Request, { params }: Params) {
         sessionName,
         playerName: p.playerName,
         totalScore: p.totalScore ?? 0,
-        answers: (p.answers ?? []).map((a: Record<string, unknown>) => ({
-          questionId: String(a.questionId),
-          question: String(a.question ?? ""),
-          answerId: String(a.answerId),
-          answerText: String(a.answerText ?? ""),
-          correctOptionId: a.correctOptionId ? String(a.correctOptionId) : null,
-          correct: Boolean(a.correct),
-          answeredAt: new Date(a.answeredAt).toISOString(),
-          timeLeft: Number(a.timeLeft ?? 0),
-          pointsEarned: Number(a.pointsEarned ?? 0),
-          questionIndex: Number(a.questionIndex ?? 0),
-        })),
+        answers:
+          puedeVerClave || payload?.sub === p.userId
+            ? (p.answers ?? []).map((a: Record<string, unknown>) =>
+                serializarRespuestaParticipante(a, { incluirClave: puedeVerClave })
+              )
+            : [],
       };
     });
 

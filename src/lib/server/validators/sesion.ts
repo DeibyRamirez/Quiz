@@ -18,6 +18,7 @@ export const enviarRespuestaSchema = z.object({
   questionId: z.string().min(1),
   answerId: z.string().min(1),
   answerText: z.string().optional(),
-  timeLeft: z.number().int().min(0).max(600),
+  /** Se acepta por compatibilidad con clientes viejos y se ignora al calificar. */
+  timeLeft: z.number().int().min(0).max(600).optional(),
   questionIndex: z.number().int().min(0),
 });

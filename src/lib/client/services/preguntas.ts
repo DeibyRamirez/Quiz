@@ -1,5 +1,5 @@
 import type { CrearPregunta, ActualizarPregunta, Pregunta } from "@/app/types";
-import { apiRequest, contruirUrlApi } from "@/lib/client/api";
+import { ApiError, apiRequest, contruirUrlApi } from "@/lib/client/api";
 
 export async function listarPreguntas(
   quizId: string,
@@ -9,7 +9,20 @@ export async function listarPreguntas(
   if (opciones?.incluirInactivas) {
     params.set("activa", "false");
   }
-  return apiRequest<Pregunta[]>(`/preguntas?${params.toString()}`);
+  try {
+    return await apiRequest<Pregunta[]>(`/preguntas?${params.toString()}`);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw new ApiError(
+        error.message || "No pudimos cargar las preguntas.",
+        error.status,
+        error.detalles
+      );
+    }
+    throw new Error(
+      "No pudimos cargar las preguntas. Revisa tu conexión e intenta de nuevo."
+    );
+  }
 }
 
 export async function obtenerPregunta(id: string): Promise<Pregunta> {

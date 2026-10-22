@@ -3,11 +3,13 @@ import {
   preguntaApiToUi,
   evaluarRespuestaUi,
 } from "@/lib/client/mappers/pregunta-ui";
+import { puntosPorTiempo } from "@/lib/server/services/tiempo-sesion";
 import { serializarDocumento } from "@/lib/server/utils/serializar";
 
 export function calificarRespuesta(
   preguntaDoc: Record<string, unknown> & { _id: unknown },
   answerId: string,
+  /** Segundos restantes calculados en el servidor. No usar el valor del cliente. */
   timeLeft: number
 ): {
   correct: boolean;
@@ -16,6 +18,8 @@ export function calificarRespuesta(
   correctOptionId: string | null;
   questionText: string;
   similitud?: number;
+  respuestaRevelada: string;
+  opcionesCorrectas: string[];
 } {
   const pregunta = serializarDocumento(
     preguntaDoc as Parameters<typeof serializarDocumento>[0]
@@ -41,9 +45,12 @@ export function calificarRespuesta(
 
   const basePoints = ui.points || 1000;
   const timeLimit = ui.timeLimit || 30;
-  const pointsEarned = evaluacion.correct
-    ? Math.round((timeLeft / timeLimit) * basePoints)
-    : 0;
+  const pointsEarned = puntosPorTiempo(
+    evaluacion.correct,
+    timeLeft,
+    timeLimit,
+    basePoints
+  );
 
   const correctOptionId =
     ui.questionType === "numerical" ||
@@ -52,6 +59,21 @@ export function calificarRespuesta(
       ? null
       : ui.correctOption ?? null;
 
+  const opcionesCorrectas = (ui.options ?? [])
+    .filter((opcion) => opcion.isCorrect)
+    .map((opcion) => opcion.id);
+  let respuestaRevelada = "";
+  if (opcionesCorrectas.length > 0 && ui.options) {
+    respuestaRevelada = ui.options
+      .filter((opcion) => opcion.isCorrect)
+      .map((opcion) => opcion.text)
+      .join(" · ");
+  } else if (ui.exactAnswerText) {
+    respuestaRevelada = ui.exactAnswerText;
+  } else if (typeof ui.correctValue === "number") {
+    respuestaRevelada = ui.unit ? `${ui.correctValue} ${ui.unit}` : String(ui.correctValue);
+  }
+
   return {
     correct: evaluacion.correct,
     pointsEarned,
@@ -59,5 +81,7 @@ export function calificarRespuesta(
     correctOptionId,
     questionText: ui.question,
     similitud: evaluacion.similitud,
+    respuestaRevelada,
+    opcionesCorrectas,
   };
 }

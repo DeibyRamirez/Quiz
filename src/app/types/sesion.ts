@@ -36,6 +36,9 @@ export interface RespuestaParticipante {
   timeLeft: number;
   pointsEarned: number;
   questionIndex: number;
+  /** Solo llega después de haber respondido esa pregunta. */
+  respuestaRevelada?: string | null;
+  opcionesCorrectas?: string[];
 }
 
 export interface ParticipanteSesion {

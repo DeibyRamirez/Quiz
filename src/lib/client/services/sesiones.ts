@@ -3,7 +3,7 @@ import type {
   ResultadosQuiz,
   SesionLive,
 } from "@/app/types/sesion";
-import { apiRequest } from "@/lib/client/api";
+import { ApiError, apiRequest } from "@/lib/client/api";
 
 export async function crearSesion(quizId: string): Promise<SesionLive> {
   return apiRequest<SesionLive>("/sesiones", {
@@ -78,11 +78,20 @@ export async function enviarRespuestaSesion(
   totalScore: number;
   alreadyAnswered: boolean;
   similitud?: number;
+  respuestaRevelada?: string;
+  opcionesCorrectas?: string[];
 }> {
-  return apiRequest(`/sesiones/${pin}/respuestas`, {
-    method: "POST",
-    body: JSON.stringify(datos),
-  });
+  try {
+    return await apiRequest(`/sesiones/${pin}/respuestas`, {
+      method: "POST",
+      body: JSON.stringify(datos),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new Error(
+      "No pudimos enviar tu respuesta. Revisa tu conexión e intenta de nuevo."
+    );
+  }
 }
 
 export async function obtenerProgresoSesion(
