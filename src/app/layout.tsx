@@ -11,6 +11,7 @@ import "./globals.css"
 
 import Footer from "@/components/footer"
 import AdsenseLoader from "@/components/adsense-loader"
+import CookieBanner from "@/components/cookie-banner"
 
 
 // Fuentes 
@@ -38,12 +39,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" className={`${inter.variable} ${montserrat.variable}`}>
       <head>
-        {/* Google AdSense - Verificación */}
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5641264317544814"
-          crossOrigin="anonymous"
-        ></script>
         <meta
           name="viewport"
           content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
@@ -52,8 +47,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
 
       <body className={`${inter.variable} ${montserrat.variable}`}>
-        {/* Carga AdSense SOLO si aceptan */}
+        {/* Carga AdSense SOLO si aceptan cookies */}
         <AdsenseLoader />
+        <CookieBanner />
 
         {/* ✅ SOLO limitar ancho en móvil */}
         <div className="mx-auto w-full px-4 sm:px-6">
