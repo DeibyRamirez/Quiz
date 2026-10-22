@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -39,6 +39,7 @@ function GoogleIcon() {
 
 export default function LoginPage() {
   const router = useRouter();
+  const pin = useSearchParams().get("pin");
   const [correo, setCorreo] = useState("");
   const [contraseña, setContraseña] = useState("");
   const [error, setError] = useState("");
@@ -53,7 +54,7 @@ export default function LoginPage() {
     try {
       const usuario = await iniciarSesion(correo, contraseña);
       establecerSesionCache(usuario);
-      redirigirPorRol(usuario.rol, router);
+      redirigirPorRol(usuario.rol, router, pin);
     } catch (e) {
       const mensaje =
         e instanceof Error ? e.message : "Error al iniciar sesión.";
@@ -70,7 +71,7 @@ export default function LoginPage() {
     try {
       const usuario = await iniciarSesionConGoogle();
       establecerSesionCache(usuario);
-      redirigirPorRol(usuario.rol, router);
+      redirigirPorRol(usuario.rol, router, pin);
     } catch (e) {
       const mensaje =
         e instanceof Error ? e.message : "Error al iniciar sesión con Google.";
@@ -149,7 +150,10 @@ export default function LoginPage() {
 
         <p className="text-center caption mt-6">
           ¿No tienes cuenta?{" "}
-          <Link href="/registro" className="text-primary font-medium hover:underline">
+          <Link
+            href={pin && /^\d{6}$/.test(pin) ? `/registro?pin=${pin}` : "/registro"}
+            className="text-primary font-medium hover:underline"
+          >
             Regístrate aquí
           </Link>
         </p>

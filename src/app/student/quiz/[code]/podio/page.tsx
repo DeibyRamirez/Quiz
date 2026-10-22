@@ -193,6 +193,15 @@ export default function QuizSummaryPage() {
           </Card>
         )}
 
+        <p className="qq-label mb-1">Tu puntaje</p>
+        <p
+          className="qq-display mb-8 tabular-nums"
+          style={{ fontSize: "clamp(3.5rem, 12vw, 7rem)", lineHeight: 0.9 }}
+        >
+          {me.totalScore}
+          <span className="ml-2 text-[0.28em]">pts</span>
+        </p>
+
         {allUsers.length > 0 && (
           <div className="mb-8">
             <PodioKahoot

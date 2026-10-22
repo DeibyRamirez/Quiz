@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { obtenerUsuarioActual } from "@/lib/client/auth";
 
 export default function ProtectedRoute({
@@ -12,6 +12,7 @@ export default function ProtectedRoute({
   allowedRoles: string[];
 }) {
   const router = useRouter();
+  const pin = useSearchParams().get("pin");
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
 
@@ -27,7 +28,9 @@ export default function ProtectedRoute({
         if (!usuario) {
           setAuthorized(false);
           setLoading(false);
-          router.replace("/login");
+          const destino =
+            pin && /^\d{6}$/.test(pin) ? `/login?pin=${pin}` : "/login";
+          router.replace(destino);
           return;
         }
 
@@ -44,7 +47,9 @@ export default function ProtectedRoute({
         if (!active) return;
         setAuthorized(false);
         setLoading(false);
-        router.replace("/login");
+        const destino =
+          pin && /^\d{6}$/.test(pin) ? `/login?pin=${pin}` : "/login";
+        router.replace(destino);
       }
     };
 
@@ -53,7 +58,7 @@ export default function ProtectedRoute({
     return () => {
       active = false;
     };
-  }, [router, allowedRoles]);
+  }, [router, allowedRoles, pin]);
 
   if (loading) return <p className="text-center py-8">Verificando acceso...</p>;
   if (!authorized) return null;

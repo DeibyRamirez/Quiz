@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -12,6 +12,7 @@ import { registrarUsuario, redirigirPorRol } from "@/lib/client/services/auth";
 
 export default function RegistroPage() {
   const router = useRouter();
+  const pin = useSearchParams().get("pin");
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
   const [contraseña, setContraseña] = useState("");
@@ -30,7 +31,7 @@ export default function RegistroPage() {
         contraseña,
       });
       establecerSesionCache(usuario);
-      redirigirPorRol(usuario.rol, router);
+      redirigirPorRol(usuario.rol, router, pin);
     } catch (e) {
       const mensaje =
         e instanceof Error ? e.message : "Error al crear la cuenta.";
@@ -97,7 +98,10 @@ export default function RegistroPage() {
 
         <p className="text-center caption mt-6">
           ¿Ya tienes cuenta?{" "}
-          <Link href="/login" className="text-primary font-medium hover:underline">
+          <Link
+            href={pin && /^\d{6}$/.test(pin) ? `/login?pin=${pin}` : "/login"}
+            className="text-primary font-medium hover:underline"
+          >
             Inicia sesión
           </Link>
         </p>
