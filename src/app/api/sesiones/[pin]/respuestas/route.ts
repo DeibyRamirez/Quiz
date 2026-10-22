@@ -93,6 +93,8 @@ export async function POST(request: Request, { params }: Params) {
       timeLeft: reloj.timeLeft,
       pointsEarned: resultado.pointsEarned,
       questionIndex: datos.questionIndex,
+      respuestaRevelada: resultado.respuestaRevelada,
+      opcionesCorrectas: resultado.opcionesCorrectas,
     };
 
     const actualizado = await ParticipanteSesionModel.findOneAndUpdate(
@@ -121,6 +123,8 @@ export async function POST(request: Request, { params }: Params) {
       totalScore: actualizado.totalScore,
       alreadyAnswered: false,
       similitud: resultado.similitud,
+      respuestaRevelada: resultado.respuestaRevelada,
+      opcionesCorrectas: resultado.opcionesCorrectas,
     });
   } catch (error) {
     if (error instanceof AuthError) {

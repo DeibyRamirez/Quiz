@@ -48,5 +48,9 @@ export function serializarRespuestaParticipante(
     timeLeft: Number(a.timeLeft ?? 0),
     pointsEarned: Number(a.pointsEarned ?? 0),
     questionIndex: Number(a.questionIndex ?? 0),
+    respuestaRevelada: a.respuestaRevelada ? String(a.respuestaRevelada) : null,
+    opcionesCorrectas: Array.isArray(a.opcionesCorrectas)
+      ? a.opcionesCorrectas.map((id) => String(id))
+      : [],
   };
 }

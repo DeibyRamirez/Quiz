@@ -18,6 +18,8 @@ export function calificarRespuesta(
   correctOptionId: string | null;
   questionText: string;
   similitud?: number;
+  respuestaRevelada: string;
+  opcionesCorrectas: string[];
 } {
   const pregunta = serializarDocumento(
     preguntaDoc as Parameters<typeof serializarDocumento>[0]
@@ -57,6 +59,21 @@ export function calificarRespuesta(
       ? null
       : ui.correctOption ?? null;
 
+  const opcionesCorrectas = (ui.options ?? [])
+    .filter((opcion) => opcion.isCorrect)
+    .map((opcion) => opcion.id);
+  let respuestaRevelada = "";
+  if (opcionesCorrectas.length > 0 && ui.options) {
+    respuestaRevelada = ui.options
+      .filter((opcion) => opcion.isCorrect)
+      .map((opcion) => opcion.text)
+      .join(" · ");
+  } else if (ui.exactAnswerText) {
+    respuestaRevelada = ui.exactAnswerText;
+  } else if (typeof ui.correctValue === "number") {
+    respuestaRevelada = ui.unit ? `${ui.correctValue} ${ui.unit}` : String(ui.correctValue);
+  }
+
   return {
     correct: evaluacion.correct,
     pointsEarned,
@@ -64,5 +81,7 @@ export function calificarRespuesta(
     correctOptionId,
     questionText: ui.question,
     similitud: evaluacion.similitud,
+    respuestaRevelada,
+    opcionesCorrectas,
   };
 }

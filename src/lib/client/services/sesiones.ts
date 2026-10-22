@@ -78,6 +78,8 @@ export async function enviarRespuestaSesion(
   totalScore: number;
   alreadyAnswered: boolean;
   similitud?: number;
+  respuestaRevelada?: string;
+  opcionesCorrectas?: string[];
 }> {
   try {
     return await apiRequest(`/sesiones/${pin}/respuestas`, {
