@@ -6,6 +6,10 @@ import { PreguntaModel } from "@/lib/server/models/Pregunta";
 import { QuizModel } from "@/lib/server/models/Quiz";
 import { actualizarPreguntaSchema } from "@/lib/server/validators/pregunta";
 import { manejarErrorApi, respuestaError } from "@/lib/server/utils/api-response";
+import {
+  lectorPuedeVerRespuestas,
+  ocultarRespuestasPregunta,
+} from "@/lib/server/services/visibilidad-pregunta";
 import { serializarDocumento } from "@/lib/server/utils/serializar";
 
 type Params = { params: { id: string } };
@@ -20,7 +24,12 @@ export async function GET(_request: Request, { params }: Params) {
       return respuestaError("Pregunta no encontrada", 404);
     }
 
-    return NextResponse.json(serializarDocumento(pregunta));
+    const serializada = serializarDocumento(pregunta);
+    const puedeVerClave = await lectorPuedeVerRespuestas(String(pregunta.quizId));
+
+    return NextResponse.json(
+      puedeVerClave ? serializada : ocultarRespuestasPregunta(serializada)
+    );
   } catch (error) {
     return manejarErrorApi(error);
   }

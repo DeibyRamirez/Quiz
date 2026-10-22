@@ -4,6 +4,10 @@ import { QuizModel } from "@/lib/server/models/Quiz";
 import { PreguntaModel } from "@/lib/server/models/Pregunta";
 import { actualizarQuizSchema } from "@/lib/server/validators/quiz";
 import { manejarErrorApi, respuestaError } from "@/lib/server/utils/api-response";
+import {
+  lectorPuedeVerRespuestas,
+  ocultarRespuestasPregunta,
+} from "@/lib/server/services/visibilidad-pregunta";
 import { serializarDocumento, serializarDocumentos } from "@/lib/server/utils/serializar";
 
 type Params = { params: { id: string } };
@@ -22,9 +26,14 @@ export async function GET(_request: Request, { params }: Params) {
       .sort({ creadoEn: 1 })
       .lean();
 
+    const puedeVerClave = await lectorPuedeVerRespuestas(params.id);
+    const serializadas = serializarDocumentos(preguntas);
+
     return NextResponse.json({
       ...serializarDocumento(quiz),
-      preguntas: serializarDocumentos(preguntas),
+      preguntas: puedeVerClave
+        ? serializadas
+        : serializadas.map((pregunta) => ocultarRespuestasPregunta(pregunta)),
     });
   } catch (error) {
     return manejarErrorApi(error);
